@@ -1,0 +1,110 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <title>Settings</title>
+    <link rel="stylesheet" href="{% static 'chat/wp.css' %}">
+    
+    <style>
+        /* ==========================================
+           DESKTOP STYLES
+           ========================================== */
+      body { 
+            background: #f0f2f5; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh;
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+        }
+        
+        .settings-box { 
+            background: white; 
+            padding: 40px; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
+            width: 400px; 
+            text-align: center; 
+            box-sizing: border-box; 
+        }
+        
+        .settings-box img { 
+            width: 140px; 
+            height: 140px; 
+            border-radius: 50%; 
+            object-fit: cover; 
+            margin-bottom: 25px; 
+            border: 3px solid #128C7E;
+            padding: 3px;
+        }
+
+        form p { text-align: left; margin-bottom: 8px; font-size: 14px; color: #54656f; font-weight: 500;}
+        
+        input[type="file"], input[type="text"] { 
+            width: 100%; 
+            padding: 12px 15px; 
+            margin-bottom: 20px; 
+            box-sizing: border-box;
+            background: #f0f2f5;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            outline: none;
+        }
+        
+        button { 
+            background: #128C7E; 
+            color: white; 
+            border: none; 
+            padding: 15px; 
+            border-radius: 25px; 
+            cursor: pointer; 
+            font-size: 16px; 
+            width: 100%;
+            font-weight: 600;
+            margin-top: 10px;
+            box-shadow: 0 4px 6px rgba(18, 140, 126, 0.2);
+        }
+        
+        a { color: #128C7E; text-decoration: none; display: block; margin-top: 25px; font-weight: 600; font-size: 16px;}
+
+        /* MOBILE OVERRIDE: Flat, edge-to-edge layout */
+        @media screen and (max-width: 768px) {
+            body { background: white; align-items: flex-start; }
+            .settings-box {
+                width: 100vw;
+                min-height: 100vh;
+                border-radius: 0;
+                box-shadow: none;
+                padding: 30px 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="settings-box">
+    <h2>Profile Settings</h2>
+    
+    {% if user.profile.image %}
+        <img src="{{ user.profile.image.url }}" alt="Profile">
+    {% else %}
+        <img src="https://ui-avatars.com/api/?name={{ user.username }}" alt="Default">
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Save Changes</button>
+    </form>
+
+    <a href="{% url 'index' %}">Back to Chat</a>
+</div>
+
+</body>
+</html>

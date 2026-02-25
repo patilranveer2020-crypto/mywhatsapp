@@ -1,0 +1,255 @@
+{% load static %}
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" href="data:,">
+    <meta charset="UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <title>WhatsApp Clone</title>
+    <link rel="stylesheet" href="{% static 'chat/wp.css' %}?v=100">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous">
+</head>
+<body>
+    
+    <input type="hidden" id="current-username" value="{{ user.username }}">
+    <input type="hidden" id="current-user-id" value="{{ user.id }}">
+    
+    <div class="app-wrapper">
+        <div class="app-container">
+            
+            <aside class="sidebar">
+                <header class="header">
+                    <a href="{% url 'settings' %}">
+                        {% if user.profile.image %}
+                            <img src="{{ user.profile.image.url }}" class="my-avatar" style="object-fit: cover;">
+                        {% else %}
+                            <img src="https://ui-avatars.com/api/?name={{ user.username }}" class="my-avatar">
+                        {% endif %}
+                    </a>
+                    
+                    <div class="header-icons">
+                        <i class="fa-solid fa-users" id="create-group-btn" style="cursor: pointer;" title="Create Group"></i>
+                        <i class="fa-solid fa-circle-notch" id="status-btn" style="cursor: pointer;" title="Status"></i>
+                        <i class="fa-solid fa-message" id="new-chat-btn" style="cursor: pointer;" title="New Chat"></i>
+                        <i class="fa-solid fa-ellipsis-vertical" id="menu-btn" style="cursor: pointer;" title="Menu"></i>
+                        
+                        <div id="main-menu" class="dropdown-menu" style="display: none;">
+                            <a href="{% url 'settings' %}"><i class="fa-solid fa-user"></i> Profile</a>
+                            <a href="{% url 'settings' %}"><i class="fa-solid fa-gear"></i> Settings</a>
+                            <hr style="border: 0; border-top: 1px solid #eee; margin: 5px 0;">
+                            
+                            <form action="{% url 'logout' %}" method="post" style="margin: 0;">
+                                {% csrf_token %}
+                                <button type="submit" class="logout-btn" style="background: none; border: none; padding: 12px 20px; width: 100%; text-align: left; color: #d9534f; font-size: 14.5px; cursor: pointer; display: block;">
+                                    <i class="fa-solid fa-right-from-bracket" style="margin-right: 10px; width: 18px;"></i> Log Out
+                                </button>
+                            </form>
+                        </div>
+
+                    </div>
+                </header>
+                
+                <div class="search-container">
+                    <div class="search-input">
+                       <i class="fa-solid fa-magnifying-glass"></i>
+                       <input type="text" id="search-input" placeholder="Search or start new chat">
+                    </div>
+                </div>
+
+                <div class="chat-list">
+                    <div class="sidebar-section-title" style="padding: 10px; font-size: 12px; color: #888; text-transform: uppercase; font-weight: bold;">
+                        My Groups
+                    </div>
+
+                    {% for g in groups %}
+                    <div class="chat-item" onclick="startGroupChat('{{ g.id }}', '{{ g.name|escapejs }}')" style="display: flex; align-items: center; padding: 10px; cursor: pointer; border-bottom: 1px solid #eee;">
+                        <img src="https://ui-avatars.com/api/?name={{ g.name }}&background=128C7E&color=fff&rounded=true" alt="Group" class="contact-avatar" style="width: 45px; height: 45px; border-radius: 50%; margin-right: 15px;">
+                        <div class="chat-details">
+                            <div class="chat-row">
+                                <span class="contact-name" style="margin: 0; font-size: 16px; color: #333;">{{ g.name }}</span>
+                            </div>
+                            <p class="last-msg" style="margin: 5px 0 0 0; font-size: 13px; color: #888;">Group Chat</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <div class="sidebar-section-title" style="padding: 10px; font-size: 12px; color: #888; text-transform: uppercase; font-weight: bold;">
+                        Direct Messages
+                    </div>
+
+                    {% for user in users %}
+                    <div class="chat-item" onclick="startChat('{{ user.id }}', '{{ user.username|escapejs }}')">
+                        {% if user.unread_count > 0 %}
+                            <span class="unread-badge" id="badge-{{ user.id }}">
+                        {{ user.unread_count }}
+                            </span>
+                        {% endif %}
+                        
+                        {% if user.profile.image %}
+                            <img src="{{ user.profile.image.url }}" class="contact-avatar" style="object-fit: cover;">
+                        {% else %}
+                            <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=random" class="contact-avatar">
+                        {% endif %}
+
+                        <div class="chat-details">
+                            <div class="chat-row">
+                                <span class="contact-name">{{ user.username }}</span>
+                                <span class="chat-time">
+                                    {% if user.last_time %}
+                                        {{ user.last_time|date:"H:i" }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                            
+                            <p class="last-msg">
+                                {% if user.last_msg %}
+                                    {{ user.last_msg|truncatechars:30 }}
+                                {% else %}
+                                    <span style="font-style: italic; color: #aaa;">Start a new chat</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </aside>
+
+         <div class="main-chat">
+                <div class="header">
+                  <div class="active-contact">
+                 <i class="fa-solid fa-arrow-left" id="back-btn" style="display: none; margin-right: 15px; font-size: 20px; cursor: pointer;"></i>
+            
+            <img src="" id="active-avatar" class="contact-avatar">
+            <div class="active-info">
+                <div class="contact-name" id="display-name">Select a contact</div>
+                <small id="typing-status"></small>
+            </div>
+        </div>
+        
+        <div class="header-icons">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <i class="fa-solid fa-ellipsis-vertical" id="menu-btn"></i>
+        </div>
+    </div>
+
+                <div class="conversation-area" id="chat-window">
+                    {% for message in messages %}
+                        {% ifchanged message.timestamp.date %}
+                            <div class="date-separator">
+                                <span>{{ message.timestamp|naturalday|capfirst }}</span>
+                            </div>
+                        {% endifchanged %}
+                        
+                        <div class="message {% if message.sender == user %}sent{% else %}received{% endif %}">
+                            <p>
+                                {{ message.content }}
+                                <span>{{ message.timestamp|date:"H:i" }}</span>
+                            </p>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <footer class="chat-input-area">
+                    <i class="fa-regular fa-face-smile" id="emoji-btn"></i>
+    
+                    <label for="image-upload" style="cursor: pointer;">
+                        <i class="fa-solid fa-paperclip"></i>
+                    </label>
+                    <input type="file" id="image-upload" accept="image/*" style="display: none;">
+    
+                    <input type="text" id="message-input" placeholder="Type a message">
+    
+                    <button id="send-btn">
+                        <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </footer>
+            </main>
+        </div>
+    </div>
+    
+    <div id="group-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="width: 350px; padding: 25px; background: white; border-radius: 12px;">
+            <h3 style="margin-top: 0; color: #075E54;">Create New Group</h3>
+            
+            <input type="text" id="group-name" placeholder="Group Subject" style="width: 100%; padding: 10px; margin-bottom: 15px; border-radius: 5px; border: 1px solid #ccc; box-sizing: border-box;">
+            
+            <h4 style="margin-bottom: 5px; color: #555;">Select Members:</h4>
+            
+            <div class="user-list-container" style="max-height: 200px; overflow-y: auto; border: 1px solid #e0e0e0; padding: 10px; border-radius: 5px; margin-bottom: 15px; background: #f9f9f9;">
+                {% for u in users %}
+                    <div class="user-checkbox" style="margin-bottom: 8px;">
+                        <input type="checkbox" id="user_{{ u.id }}" value="{{ u.id }}" class="group-member-cb">
+                        <label for="user_{{ u.id }}" style="cursor: pointer; font-size: 15px; margin-left: 5px;">{{ u.username }}</label>
+                    </div>
+                {% endfor %}
+            </div>
+            
+            <div class="modal-actions" style="display: flex; justify-content: space-between;">
+                <button id="cancel-group-btn" style="background: #ccc; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;">Cancel</button>
+                <button id="save-group-btn" style="background: #128C7E; color: white; border: none; padding: 10px 15px; border-radius: 5px; cursor: pointer;">Create Group</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="new-chat-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="width: 350px; padding: 20px; background: white; border-radius: 12px;">
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 style="margin: 0; color: #075E54;">Start New Chat</h3>
+                <i class="fa-solid fa-xmark" id="close-new-chat-btn" style="cursor: pointer; font-size: 20px; color: #888;"></i>
+            </div>
+            
+            <div class="user-list-container" style="max-height: 350px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px;">
+                {% for u in users %}
+                    <div class="chat-item" onclick="startNewChat('{{ u.id }}', '{{ u.username|escapejs }}')" style="display: flex; align-items: center; padding: 12px; cursor: pointer; border-bottom: 1px solid #eee; transition: background 0.2s;">
+                        <img src="https://ui-avatars.com/api/?name={{ u.username }}&background=random" style="width: 40px; height: 40px; border-radius: 50%; margin-right: 15px;">
+                        <span style="font-size: 16px; font-weight: bold; color: #333;">{{ u.username }}</span>
+                    </div>
+                {% endfor %}
+            </div>
+            
+        </div>
+    </div>
+
+
+    <div id="status-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #111; z-index: 999999;">
+        <div style="display: flex; width: 100%; height: 100%;">
+            
+            <div style="width: 30%; background: #222; border-right: 1px solid #333; color: white; display: flex; flex-direction: column;">
+                
+                <div style="padding: 20px; display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center;">
+                        <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=random" style="width: 45px; height: 45px; border-radius: 50%; margin-right: 15px;">
+                        <div>
+                            <h4 style="margin: 0;">My Status</h4>
+                            <label for="status-upload" style="cursor: pointer; font-size: 13px; color: #00bfa5; font-weight: bold;">+ Add to my story</label>
+                            <input type="file" id="status-upload" accept="image/*" style="display: none;">
+                        </div>
+                    </div>
+                    <i class="fa-solid fa-xmark" id="close-status-btn" style="cursor: pointer; font-size: 24px; color: #888;"></i>
+                </div>
+                
+                <hr style="border-color: #333; margin: 0;">
+                <div style="padding: 15px; font-size: 14px; color: #aaa; text-transform: uppercase;">Recent Updates</div>
+                
+                <div id="status-list-container" style="flex-grow: 1; overflow-y: auto;">
+                    </div>
+            </div>
+            
+            <div id="status-viewer" style="width: 70%; display: flex; justify-content: center; align-items: center; position: relative;">
+                <div style="text-align: center; color: #aaa;">
+                    <i class="fa-solid fa-circle-notch" style="font-size: 50px; margin-bottom: 20px;"></i>
+                    <h2>Click on a contact to view their status</h2>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@3.1.1/dist/index.min.js"></script>
+    <script src="{% static 'chat/wp.js' %}?v=4"></script>
+</body>
+</html>
