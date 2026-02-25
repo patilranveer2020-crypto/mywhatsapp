@@ -35,6 +35,7 @@ urlpatterns = [
     path('api/status/delete/<int:status_id>/', views.delete_status, name='delete_status'),
     path('signup/', views.signup, name='signup'),
     path('login/', auth_views.LoginView.as_view(template_name='chat/login.html'), name='login'),
+    path('', include('chat.urls')),
     
 ]
 
