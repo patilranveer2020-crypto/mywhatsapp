@@ -27,8 +27,14 @@ SECRET_KEY = 'django-insecure-@v7h*2oa#-5sn!9^_6#barng(n6tar3+dcn8k07-i!p7=onr=)
 DEBUG = False
 
 ALLOWED_HOSTS = ['*']
-CSRF_TRUSTED_ORIGINS = ['https://mywhatsapp-rq86.onrender.com']
+# Tell Django to trust Render's secure proxy
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
+# Allow both your specific URL and any Render subdomains just to be safe
+CSRF_TRUSTED_ORIGINS = [
+    'https://mywhatsapp-rq86.onrender.com',
+    'https://*.onrender.com',
+]
 
 # Application definition
 
