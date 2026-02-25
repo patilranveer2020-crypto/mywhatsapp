@@ -168,3 +168,7 @@ CLOUDINARY_STORAGE = {
 
 # This tells Django: "For all media files, send them to Cloudinary!"
 DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+
+
+
+LOGIN_URL = 'signup'
