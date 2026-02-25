@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp - Log In</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: #ECE5DD; 
+            display: flex; justify-content: center; align-items: center; 
+            height: 100vh; margin: 0; 
+        }
+        .login-container { 
+            background: white; padding: 40px; border-radius: 10px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 300px; text-align: center; 
+        }
+        h2 { color: #075E54; margin-top: 0; }
+        input { 
+            width: 90%; padding: 10px; margin: 10px 0; 
+            border: 1px solid #ccc; border-radius: 5px; 
+        }
+        .btn { 
+            background-color: #25D366; color: white; padding: 10px 20px; 
+            border: none; border-radius: 5px; cursor: pointer; width: 100%; 
+            font-size: 16px; font-weight: bold; margin-top: 15px;
+        }
+        .btn:hover { background-color: #128C7E; }
+        ul.errorlist { color: red; font-size: 12px; text-align: left; padding-left: 20px;}
+    </style>
+</head>
+<body>
+
+    <div class="login-container">
+        <h2>Log In</h2>
+        <form method="POST">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn">Log In</button>
+        </form>
+        <p style="font-size: 14px; margin-top: 20px;">
+            Don't have an account? <a href="/signup/" style="color: #128C7E;">Sign up</a>
+        </p>
+    </div>
+
+</body>
+</html>

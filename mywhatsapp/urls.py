@@ -16,7 +16,8 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from chat import views  # Import your views
+from django.contrib.auth import views as auth_views
+from . import views # Import your views
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -33,6 +34,7 @@ urlpatterns = [
     path('api/status/list/', views.get_statuses, name='get_statuses'),
     path('api/status/delete/<int:status_id>/', views.delete_status, name='delete_status'),
     path('signup/', views.signup, name='signup'),
+    path('login/', auth_views.LoginView.as_view(template_name='chat/login.html'), name='login'),
     
 ]
 
