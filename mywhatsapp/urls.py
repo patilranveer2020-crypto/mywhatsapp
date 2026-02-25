@@ -32,7 +32,7 @@ urlpatterns = [
     path('api/status/upload/', views.upload_status, name='upload_status'),
     path('api/status/list/', views.get_statuses, name='get_statuses'),
     path('api/status/delete/<int:status_id>/', views.delete_status, name='delete_status'),
-   
+    path('signup/', views.signup, name='signup'),
     
 ]
 

@@ -14,6 +14,8 @@ from .models import ChatGroup,GroupMessage
 from django.utils import timezone
 from datetime import timedelta
 from .models import UserStatus
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth import login
 
 @login_required
 def index(request):
@@ -250,3 +252,19 @@ def delete_status(request, status_id):
             return JsonResponse({'status': 'error', 'message': 'Status not found or unauthorized.'})
             
     return JsonResponse({'status': 'error', 'message': 'Invalid request.'})
+
+
+
+def signup(request):
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            # Automatically log the user in after they sign up!
+            login(request, user)
+            # Redirect them to your main chat page (change 'index' if your main view is named differently)
+            return redirect('index') 
+    else:
+        form = UserCreationForm()
+
+    return render(request, 'chat/signup.html', {'form': form})
