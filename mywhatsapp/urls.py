@@ -17,27 +17,35 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.contrib.auth import views as auth_views
-from . import views # Import your views
+from chat import views  # <--- THIS IS THE MAGIC FIX (importing from chat)
 from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
+    # Admin Panel
     path('admin/', admin.site.urls),
-    path('', views.index, name='index'),  # Add this line
-    path('api/messages/<int:user_id>/', views.get_messages, name='get_messages'),
-    path('settings/', views.settings_page, name='settings'),
-    path('api/upload/', views.upload_image, name='upload_image'),
+    
+    # Main Chat Page
+    path('', views.index, name='index'),
+    
+    # Authentication (Login & Signup)
+    path('signup/', views.signup, name='signup'),
+    path('login/', auth_views.LoginView.as_view(template_name='chat/login.html'), name='login'),
     path('accounts/', include('django.contrib.auth.urls')),
+    
+    # Your Custom APIs & Settings
+    path('settings/', views.settings_page, name='settings'),
+    path('api/messages/<int:user_id>/', views.get_messages, name='get_messages'),
+    path('api/upload/', views.upload_image, name='upload_image'),
     path('api/create-group/', views.create_group, name='create_group'),
     path('api/group/<int:group_id>/messages/', views.get_group_messages, name='group_messages'),
+    
+    # Status Updates
     path('api/status/upload/', views.upload_status, name='upload_status'),
     path('api/status/list/', views.get_statuses, name='get_statuses'),
     path('api/status/delete/<int:status_id>/', views.delete_status, name='delete_status'),
-    path('signup/', views.signup, name='signup'),
-    path('login/', auth_views.LoginView.as_view(template_name='chat/login.html'), name='login'),
-    path('', include('chat.urls')),
-    
 ]
 
+# Keep your media settings for images
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
