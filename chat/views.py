@@ -49,8 +49,8 @@ def index(request):
         user.last_time = last_msg.timestamp if last_msg else None
         chat_list.append(user)
 
-    # Sort so recent chats are at the top
-    chat_list.sort(key=lambda x: x.last_time if x.last_time else datetime.min, reverse=True)
+    
+    chat_list.sort(key=lambda x: x.last_time if x.last_time else datetime.min.replace(tzinfo=timezone.utc), reverse=True)
     print("--- DEBUG GROUPS --- :", my_groups)
     return render(request, 'chat/wp.html', {
         'users': chat_list, 
