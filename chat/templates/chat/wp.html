@@ -13,6 +13,14 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous">
 </head>
 <body>
+
+    <div id="top-notification" class="top-notification" style="display: none;">
+    <div class="notification-content">
+        <span id="notif-sender" class="notif-sender">New Message</span>: 
+        <span id="notif-text" class="notif-text">...</span>
+    </div>
+    <button onclick="markAsRead()" class="mark-read-btn">Mark as Read</button>
+    </div>
     
     <input type="hidden" id="current-username" value="{{ user.username }}">
     <input type="hidden" id="current-user-id" value="{{ user.id }}">

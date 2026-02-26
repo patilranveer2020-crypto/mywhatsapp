@@ -208,3 +208,41 @@ body { background: linear-gradient(to bottom, #00a884 127px, #d1d7db 127px); hei
     min-width: 18px;
     text-align: center;
 }
+
+
+.top-notification {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    background-color: #25D366; /* WhatsApp Light Green */
+    color: white;
+    padding: 15px 20px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    z-index: 9999; /* Ensures it stays on top of everything else */
+    justify-content: space-between;
+    align-items: center;
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+.notif-sender {
+    font-weight: bold;
+    font-size: 16px;
+}
+.notif-text {
+    font-size: 14px;
+    margin-left: 5px;
+}
+.mark-read-btn {
+    background-color: white;
+    color: #075E54; /* WhatsApp Dark Green */
+    border: none;
+    padding: 8px 15px;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.mark-read-btn:hover {
+    background-color: #f0f0f0;
+}

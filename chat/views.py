@@ -16,6 +16,7 @@ from datetime import timedelta
 from .models import UserStatus
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
+from django.views.decorators.http import require_POST
 
 @login_required
 def index(request):

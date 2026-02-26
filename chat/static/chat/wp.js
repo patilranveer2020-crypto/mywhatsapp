@@ -3,6 +3,30 @@ let activeUserId = null;
 let lastSeenDate = null;
 
 // ==========================================
+// 0. NOTIFICATION LOGIC
+// ==========================================
+window.showPersistentNotification = function(senderName, messageText) {
+    document.getElementById('notif-sender').innerText = senderName || "New Message";
+    let preview = messageText.length > 30 ? messageText.substring(0, 30) + '...' : messageText;
+    document.getElementById('notif-text').innerText = preview;
+    document.getElementById('top-notification').style.display = 'flex';
+};
+
+window.markAsRead = function() {
+    document.getElementById('top-notification').style.display = 'none';
+};
+
+window.playNotificationSound = function() {
+    const sound = document.getElementById('notification-sound');
+    if (sound) {
+        sound.currentTime = 0; 
+        sound.play().catch(function(error) {
+            console.log("Autoplay blocked. User needs to click the page first.");
+        });
+    }
+};
+
+// ==========================================
 // 1. START GROUP CHAT FUNCTION
 // ==========================================
 window.startGroupChat = function(groupId, groupName) {
@@ -18,7 +42,6 @@ window.startGroupChat = function(groupId, groupName) {
     document.getElementById('active-avatar').src = `https://ui-avatars.com/api/?name=${groupName}&background=128C7E&color=fff&rounded=true`;
 
     const chatWindow = document.getElementById('chat-window');
-    // Fallback if your HTML uses conversation-area for groups too
     const actualChatContainer = chatWindow ? chatWindow : document.querySelector('.conversation-area'); 
     actualChatContainer.innerHTML = ''; 
 
@@ -38,8 +61,6 @@ window.startGroupChat = function(groupId, groupName) {
                     }
                     
                     const msgClass = isMe ? 'sent' : 'received';
-                    
-                    // Added msg.id so we can delete old group messages
                     let deleteBtn = (isMe && msg.content !== "This message was deleted") 
                         ? `<i class="fa-solid fa-trash" onclick="deleteMessage(${msg.id})" style="margin-left: 10px; cursor: pointer; font-size: 11px; color: #999;"></i>` 
                         : '';
@@ -65,7 +86,7 @@ window.startGroupChat = function(groupId, groupName) {
     chatSocket.onmessage = function(e) {
         const data = JSON.parse(e.data);
         
-        // --- 1. INTERCEPT DELETED MESSAGE (Moved INSIDE onmessage!) ---
+        // --- 1. INTERCEPT DELETED MESSAGE ---
         if (data.type === 'message_deleted') {
             const msgElement = document.getElementById(`msg-${data.message_id}`);
             if (msgElement) {
@@ -103,6 +124,12 @@ window.startGroupChat = function(groupId, groupName) {
         
         actualChatContainer.innerHTML += messageHtml;
         actualChatContainer.scrollTop = actualChatContainer.scrollHeight;
+
+        // 👉 TRIGGER BANNER ONLY IF SOMEONE ELSE SENT IT
+        if (!isMe) {
+            window.playNotificationSound();
+            window.showPersistentNotification(data.sender_name, data.message);
+        }
     };
 };
 
@@ -169,14 +196,10 @@ window.startChat = function(userId, username) {
             return; 
         }
 
-
         // --- 3. INTERCEPT ONLINE / LAST SEEN STATUS ---
         if (data.type === 'user_status') {
-            // Check to make sure this status is about the OTHER person, not me
             if (String(data.user_id) !== String(myId)) {
                 const statusText = document.getElementById('typing-status');
-                
-                // Only change the text if they aren't currently typing!
                 if (statusText.innerText !== "typing...") {
                     statusText.innerText = data.is_online ? "online" : data.last_seen;
                     statusText.style.color = data.is_online ? "#00bfa5" : "#aaa";
@@ -185,7 +208,7 @@ window.startChat = function(userId, username) {
             return; 
         }
 
-        // --- 3. INTERCEPT TYPING ---
+        // --- 4. INTERCEPT TYPING ---
         if (data.type === 'typing') {
             if (String(data.sender_id) !== String(myId)) {
                 const statusText = document.getElementById('typing-status');
@@ -200,14 +223,19 @@ window.startChat = function(userId, username) {
             return; 
         }
 
-        // --- 4. NORMAL MESSAGE ---
+        // --- 5. NORMAL MESSAGE ---
         const type = (data.sender_id == myId) ? 'sent' : 'received';
         const today = new Date().toISOString().split('T')[0];
-        // Added data.message_id here!
+        
         appendMessage(data.message, type, null, today, false, data.message_id);
 
         if (type === 'received') {
             chatSocket.send(JSON.stringify({ 'mark_read': true }));
+            
+            // 👉 TRIGGER NOTIFICATION BANNER
+            window.playNotificationSound();
+            const senderName = data.sender_name || localStorage.getItem('activeChatName'); 
+            window.showPersistentNotification(senderName, data.message);
         }
     };
 
@@ -217,7 +245,6 @@ window.startChat = function(userId, username) {
         const myId = document.getElementById('current-user-id').value;
         data.forEach(msg => {
             const type = (msg.sender_id == myId) ? 'sent' : 'received';
-            // Added msg.id here so old messages can be deleted!
             appendMessage(msg.content, type, msg.timestamp, msg.date, msg.is_read, msg.id);
         });
     });
@@ -331,18 +358,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const activeName = localStorage.getItem('activeChatName');
 
    if (window.innerWidth > 768) {
-        // DESKTOP: It's fine to auto-load because the sidebar is always visible
         if (activeType && activeId && activeName) {
             if (activeType === 'group') startGroupChat(activeId, activeName);
             else if (activeType === 'user') startChat(activeId, activeName);
         }
     } else {
-        // MOBILE: Always start fresh on the Sidebar!
         localStorage.removeItem('activeChatType');
         localStorage.removeItem('activeChatId');
         localStorage.removeItem('activeChatName');
         
-        // Ensure the chat window stays hidden until they click someone
         const appWrapper = document.querySelector('.app-wrapper');
         if (appWrapper) {
             appWrapper.classList.remove('chat-active');
@@ -383,7 +407,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (closeNewChatBtn) closeNewChatBtn.addEventListener('click', () => newChatModal.style.display = 'none');
     window.startNewChat = function(userId, username) {
         newChatModal.style.display = 'none'; 
-        startChat(userId, username);         
+        startChat(userId, username);        
     };
 
     const groupBtn = document.getElementById('create-group-btn');
