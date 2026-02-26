@@ -25,3 +25,31 @@ self.addEventListener('fetch', event => {
       })
   );
 });
+// Listen for Push events (when the app is closed)
+self.addEventListener('push', function(event) {
+    let data = {};
+    if (event.data) {
+        data = event.data.json();
+    }
+    
+    const title = data.title || "New Message";
+    const options = {
+        body: data.body || "You have a new message.",
+        icon: '/static/icon-192.png',
+        badge: '/static/icon-192.png',
+        data: { url: '/' } // Tells the notification where to go when clicked
+    };
+    
+    // Wake up the phone and show the notification!
+    event.waitUntil(
+        self.registration.showNotification(title, options)
+    );
+});
+
+// If the user taps the notification, open the app
+self.addEventListener('notificationclick', function(event) {
+    event.notification.close();
+    event.waitUntil(
+        clients.openWindow(event.notification.data.url)
+    );
+});

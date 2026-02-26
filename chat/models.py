@@ -67,3 +67,14 @@ class UserStatus(models.Model):
         from django.utils import timezone
         from datetime import timedelta
         return timezone.now() <= self.created_at + timedelta(hours=24)
+    
+
+
+class PushSubscription(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='push_subscription')
+    endpoint = models.URLField(max_length=500)
+    p256dh = models.CharField(max_length=100)
+    auth = models.CharField(max_length=100)
+
+    def __str__(self):
+        return f"Push Subscription for {self.user.username}"

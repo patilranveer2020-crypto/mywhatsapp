@@ -173,3 +173,6 @@ DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
 
 LOGIN_URL = 'signup'
 LOGIN_REDIRECT_URL = '/'
+VAPID_ADMIN_EMAIL ="mailto: <user@email.com>",
+VAPID_PUBLIC_KEY = "*****example_publicKey_*******",
+VAPID_PRIVATE_KEY = "*****example_privateKey_*******"

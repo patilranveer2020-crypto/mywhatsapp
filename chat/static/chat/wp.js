@@ -674,3 +674,45 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// This is a math utility browsers require to read your VAPID key safely
+function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+// The function that asks the phone for a Push Token
+function subscribeToPush() {
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+        navigator.serviceWorker.ready.then(function(registration) {
+            
+            // 🛑 PASTE YOUR PUBLIC VAPID KEY HERE 🛑
+            const vapidPublicKey = "*****example_publicKey_*******"; 
+            
+            const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
+
+            registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: convertedVapidKey
+            }).then(function(subscription) {
+                // We got the token! Now send it to Django.
+                fetch('/api/save-subscription/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify(subscription)
+                });
+            }).catch(function(err) {
+                console.log('Failed to subscribe the user: ', err);
+            });
+        });
+    }
+}

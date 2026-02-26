@@ -17,6 +17,7 @@ from .models import UserStatus
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
 from django.views.decorators.http import require_POST
+from .models import PushSubscription
 
 @login_required
 def index(request):
@@ -269,3 +270,21 @@ def signup(request):
         form = UserCreationForm()
 
     return render(request, 'chat/signup.html', {'form': form})
+
+
+
+@require_POST
+def save_subscription(request):
+    # Parse the token data sent from JavaScript
+    sub_data = json.loads(request.body)
+    
+    # Save or update the device token for the logged-in user
+    PushSubscription.objects.update_or_create(
+        user=request.user,
+        defaults={
+            'endpoint': sub_data['endpoint'],
+            'p256dh': sub_data['keys']['p256dh'],
+            'auth': sub_data['keys']['auth'],
+        }
+    )
+    return JsonResponse({'status': 'success'})
