@@ -50,7 +50,7 @@ def index(request):
         chat_list.append(user)
 
     
-    chat_list.sort(key=lambda x: x.last_time if x.last_time else datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+    chat_list.sort(key=lambda x: x.last_time if x.last_time else datetime.min.replace(tzinfo=timezone.UTC), reverse=True)
     print("--- DEBUG GROUPS --- :", my_groups)
     return render(request, 'chat/wp.html', {
         'users': chat_list, 
