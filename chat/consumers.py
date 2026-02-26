@@ -1,10 +1,10 @@
-# mywhatsapp/chat/consumers.py
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 from channels.db import database_sync_to_async
 from .models import Message, ChatGroup, GroupMessage, Profile
 from django.contrib.auth.models import User
 from django.utils import timezone
+from .utils import send_push_notification
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -24,11 +24,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
         await self.accept()
 
-        # --- NEW: ONLINE STATUS LOGIC ---
-        # 1. Update the database to say I am online right now
         await self.update_user_status(self.my_id, True)
         
-        # 2. Tell the room that I just came online
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -39,8 +36,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
             }
         )
 
-        # 3. Immediately fetch the OTHER person's status and send it to me
-        # (So I know if they are already waiting in the chat!)
         other_online, other_last_seen = await self.get_user_status(self.other_user_id)
         await self.send(text_data=json.dumps({
             'type': 'user_status',
@@ -50,11 +45,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
         }))
 
     async def disconnect(self, close_code):
-        # --- NEW: OFFLINE STATUS LOGIC ---
-        # 1. Update the database to say I left, and grab the exact time
         last_seen_time = await self.update_user_status(self.my_id, False)
         
-        # 2. Tell the room I left so my friend sees my "Last Seen"
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -70,21 +62,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.channel_name
         )
 
-    # --- 1. RECEIVE MESSAGE FROM FRONTEND ---
     async def receive(self, text_data):
         try:
             text_data_json = json.loads(text_data)
 
-            # -----------------------------------------------------------
-            # NEW: MESSAGE DELETION INTERCEPTOR
-            # -----------------------------------------------------------
             if text_data_json.get('action') == 'delete_message':
                 msg_id = text_data_json.get('message_id')
-                
-                # 1. Update the database securely
                 await self.mark_message_deleted_in_db(msg_id, self.my_id)
-                
-                # 2. Broadcast the deletion to the room
                 await self.channel_layer.group_send(
                     self.room_group_name,
                     {
@@ -92,8 +76,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         'message_id': msg_id
                     }
                 )
-                return # Stop here!
-            # -----------------------------------------------------------
+                return 
 
             if 'mark_read' in text_data_json:
                 await self.mark_messages_read(self.other_user_id, self.my_id)
@@ -106,9 +89,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 )
                 return
 
-            # -----------------------------------------------------------
-            # TYPING INDICATOR INTERCEPTOR
-            # -----------------------------------------------------------
             if 'typing' in text_data_json:
                 await self.channel_layer.group_send(
                     self.room_group_name,
@@ -119,14 +99,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     }
                 )
                 return 
-            # -----------------------------------------------------------
 
             message_content = text_data_json['message']
-            print(f"--- TRYING TO PROCESS: {repr(message_content)} ---")
 
             try:
+                # 1. Save the message to the database
                 new_msg = await self.save_message(message_content, self.my_id, self.other_user_id)
-                print("--- SAVED TO DATABASE SUCCESSFULLY ---")
+                
+                # 👉 2. NEW: TRIGGER THE PUSH NOTIFICATION!
+                sender_name = self.scope['user'].username
+                await self.trigger_private_push(self.other_user_id, f"New message from {sender_name}", message_content)
                 
             except Exception as db_error:
                 print(f"--- DATABASE ERROR: {db_error} ---")
@@ -139,12 +121,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 }))
                 return 
 
-            # Broadcast the message normally (ADDED message_id here!)
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
                     'type': 'chat_message',
-                    'message_id': new_msg.id, # <-- NEW
+                    'message_id': new_msg.id, 
                     'message': new_msg.content,
                     'sender_id': self.my_id,
                     'timestamp': new_msg.timestamp.strftime("%I:%M %p"),
@@ -156,10 +137,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
         except Exception as e:
             print(f"--- CRITICAL WEBSOCKET ERROR: {e} ---")
    
-    
     async def chat_message(self, event):
         await self.send(text_data=json.dumps({
-            'message_id': event['message_id'], # <-- NEW
+            'message_id': event['message_id'], 
             'message': event['message'],
             'sender_id': event['sender_id'],
             'timestamp': event['timestamp'],
@@ -167,7 +147,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'is_read': event['is_read']
         }))
 
-    # --- NEW: BROADCAST MESSAGE DELETED ---
     async def message_deleted(self, event):
         await self.send(text_data=json.dumps({
             'type': 'message_deleted',
@@ -195,23 +174,28 @@ class ChatConsumer(AsyncWebsocketConsumer):
         msg = Message.objects.create(sender=sender, recipient=recipient, content=message)
         return msg 
 
+    # 👉 NEW: ASYNC WRAPPER FOR PUSH NOTIFICATIONS
+    @database_sync_to_async
+    def trigger_private_push(self, target_user_id, title, message):
+        try:
+            target_user = User.objects.get(id=target_user_id)
+            send_push_notification(target_user, title, message)
+        except Exception as e:
+            print(f"Push Notification Failed: {e}")
+
     @database_sync_to_async
     def mark_messages_read(self, sender_id, recipient_id):
         Message.objects.filter(sender_id=sender_id, recipient_id=recipient_id, is_read=False).update(is_read=True)
 
-    # NEW: Securely update the message text in the DB
     @database_sync_to_async
     def mark_message_deleted_in_db(self, msg_id, user_id):
         try:
-            # Only allow the sender to delete their own message!
             msg = Message.objects.get(id=msg_id, sender_id=user_id)
             msg.content = "This message was deleted"
             msg.save()
         except Message.DoesNotExist:
             pass
 
-
-    # --- NEW: STATUS BROADCAST HANDLER ---
     async def user_status(self, event):
         await self.send(text_data=json.dumps({
             'type': 'user_status',
@@ -220,7 +204,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'last_seen': event['last_seen']
         }))
 
-    # --- NEW: DATABASE SYNC FUNCTIONS FOR STATUS ---
     @database_sync_to_async
     def update_user_status(self, user_id, is_online):
         try:
@@ -264,10 +247,8 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
         user_id = self.scope['user'].id
+        sender_name = self.scope['user'].username
 
-        # -----------------------------------------------------------
-        # GROUP MESSAGE DELETION INTERCEPTOR
-        # -----------------------------------------------------------
         if text_data_json.get('action') == 'delete_message':
             msg_id = text_data_json.get('message_id')
             await self.mark_group_message_deleted_in_db(msg_id, user_id)
@@ -280,12 +261,15 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
                 }
             )
             return 
-        # -----------------------------------------------------------
 
-        # 1. SAFELY CHECK IF THIS IS AN ACTUAL TEXT MESSAGE
         if 'message' in text_data_json:
             message = text_data_json['message']
+            
+            # 1. Save group message
             saved_msg = await self.save_group_message(user_id, self.group_id, message)
+
+            # 👉 2. NEW: TRIGGER GROUP PUSH NOTIFICATION
+            await self.trigger_group_push(self.group_id, user_id, sender_name, message)
 
             await self.channel_layer.group_send(
                 self.room_group_name,
@@ -294,28 +278,26 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
                     'message_id': saved_msg.id, 
                     'message': message,
                     'sender_id': user_id,
-                    'sender_name': self.scope['user'].username,
+                    'sender_name': sender_name,
                     'timestamp': saved_msg.timestamp.strftime('%H:%M')
                 }
             )
             
-        # 2. IGNORE BACKGROUND SIGNALS (so they don't crash the server!)
         elif 'type' in text_data_json and text_data_json['type'] == 'typing':
-            pass # Group typing logic can go here later
+            pass 
             
         elif text_data_json.get('mark_read'):
-            pass # Group read receipt logic can go here later
+            pass 
 
     async def chat_message(self, event):
         await self.send(text_data=json.dumps({
-            'message_id': event['message_id'], # <-- NEW
+            'message_id': event['message_id'], 
             'message': event['message'],
             'sender_id': event['sender_id'],
             'sender_name': event['sender_name'],
             'timestamp': event['timestamp']
         }))
 
-    # --- NEW: BROADCAST GROUP MESSAGE DELETED ---
     async def message_deleted(self, event):
         await self.send(text_data=json.dumps({
             'type': 'message_deleted',
@@ -328,7 +310,17 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
         group = ChatGroup.objects.get(id=group_id)
         return GroupMessage.objects.create(sender=user, group=group, content=message)
 
-    # NEW: Securely update the group message text in the DB
+    # 👉 NEW: ASYNC WRAPPER FOR GROUP PUSH NOTIFICATIONS
+    @database_sync_to_async
+    def trigger_group_push(self, group_id, sender_id, sender_name, message):
+        try:
+            group = ChatGroup.objects.get(id=group_id)
+            # Find everyone in the group except the person who sent the message
+            for member in group.members.exclude(id=sender_id):
+                send_push_notification(member, f"Group: {group.name}", f"{sender_name}: {message}")
+        except Exception as e:
+            print(f"Group Push Notification Failed: {e}")
+
     @database_sync_to_async
     def mark_group_message_deleted_in_db(self, msg_id, user_id):
         try:
