@@ -688,20 +688,23 @@ function urlBase64ToUint8Array(base64String) {
 }
 
 // The function that asks the phone for a Push Token
-function subscribeToPush() {
+window.subscribeToPush = function() {
+    alert("1. Starting subscription process...");
+    
     if ('serviceWorker' in navigator && 'PushManager' in window) {
         navigator.serviceWorker.ready.then(function(registration) {
+            alert("2. Service Worker is ready. Asking browser for token...");
             
-            // 🛑 PASTE YOUR PUBLIC VAPID KEY HERE 🛑
+            // 🛑 REMEMBER TO PASTE YOUR PUBLIC KEY HERE 🛑
             const vapidPublicKey = "*****example_publicKey_*******"; 
-            
             const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
 
             registration.pushManager.subscribe({
                 userVisibleOnly: true,
                 applicationServerKey: convertedVapidKey
             }).then(function(subscription) {
-                // We got the token! Now send it to Django.
+                alert("3. SUCCESS! Got token from browser. Sending to Django...");
+                
                 fetch('/api/save-subscription/', {
                     method: 'POST',
                     headers: {
@@ -709,10 +712,18 @@ function subscribeToPush() {
                         'X-CSRFToken': getCookie('csrftoken')
                     },
                     body: JSON.stringify(subscription)
-                });
+                })
+                .then(res => res.json())
+                .then(data => alert("4. Django says: " + JSON.stringify(data)))
+                .catch(err => alert("4. Server Error: " + err));
+
             }).catch(function(err) {
-                console.log('Failed to subscribe the user: ', err);
+                alert('ERROR getting token from browser: ' + err);
             });
+        }).catch(function(err) {
+            alert("ERROR with Service Worker: " + err);
         });
+    } else {
+        alert("ERROR: This browser does not support Push Notifications.");
     }
-}
+};
