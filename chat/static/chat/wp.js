@@ -2,6 +2,22 @@ let chatSocket = null;
 let activeUserId = null;
 let lastSeenDate = null;
 
+
+window.testOSNotification = function() {
+    // 1. Force the browser to tell us its EXACT permission status
+    Notification.requestPermission().then(permission => {
+        alert("The browser says your permission is: " + permission);
+        
+        // 2. If granted, force a notification immediately (no document.hidden check!)
+        if (permission === "granted") {
+            new Notification("Boom! It works!", {
+                body: "Your OS and browser are communicating perfectly.",
+                icon: '/static/icon-192.png' 
+            });
+        }
+    });
+};
+
 // ==========================================
 // 0. NOTIFICATION LOGIC
 // ==========================================
@@ -141,6 +157,10 @@ window.startGroupChat = function(groupId, groupName) {
 // 2. START PRIVATE CHAT FUNCTION
 // ==========================================
 window.startChat = function(userId, username) {
+    if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission();
+    }
+
     const badge = document.getElementById(`badge-${userId}`);
     if (badge) {
         badge.style.display = 'none';
