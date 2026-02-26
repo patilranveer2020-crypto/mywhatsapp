@@ -6,23 +6,27 @@ let lastSeenDate = null;
 // 0. NOTIFICATION LOGIC
 // ==========================================
 window.showPersistentNotification = function(senderName, messageText) {
+    // 1. Show the Green UI Banner (For when they are staring at the app)
     document.getElementById('notif-sender').innerText = senderName || "New Message";
     let preview = messageText.length > 30 ? messageText.substring(0, 30) + '...' : messageText;
     document.getElementById('notif-text').innerText = preview;
     document.getElementById('top-notification').style.display = 'flex';
-};
 
-window.markAsRead = function() {
-    document.getElementById('top-notification').style.display = 'none';
-};
-
-window.playNotificationSound = function() {
-    const sound = document.getElementById('notification-sound');
-    if (sound) {
-        sound.currentTime = 0; 
-        sound.play().catch(function(error) {
-            console.log("Autoplay blocked. User needs to click the page first.");
-        });
+    // 2. Fire the OS System Notification (For when they are on another tab/minimized)
+    if ("Notification" in window && Notification.permission === "granted") {
+        // 'document.hidden' checks if the user is currently looking at a different tab or app
+        if (document.hidden) { 
+            const osNotification = new Notification(senderName || "New Message", {
+                body: messageText,
+                icon: '/static/icon-192.png' // Uses the mobile app icon you made earlier!
+            });
+            
+            // If they click the OS notification, it brings them back to your chat tab!
+            osNotification.onclick = function() {
+                window.focus();
+                this.close();
+            };
+        }
     }
 };
 
@@ -398,6 +402,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     document.addEventListener('click', () => { if (mainMenu) mainMenu.style.display = 'none'; });
+    if ("Notification" in window) {
+        if (Notification.permission !== "granted" && Notification.permission !== "denied") {
+            Notification.requestPermission().then(permission => {
+                if (permission === "granted") {
+                    console.log("System notifications enabled!");
+                }
+            });
+        }
+    }
 
     const newChatBtn = document.getElementById('new-chat-btn');
     const newChatModal = document.getElementById('new-chat-modal');
