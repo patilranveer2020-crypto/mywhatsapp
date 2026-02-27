@@ -1,23 +1,17 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
 from django.http import JsonResponse
 from django.core.files.storage import default_storage
-from .models import Message, Profile
+from .models import Message, Profile, ChatGroup, GroupMessage, UserStatus, PushSubscription
 from .forms import ProfileUpdateForm
-from django.views.decorators.csrf import csrf_exempt
-from django.core.files.storage import FileSystemStorage
-import json
-from .models import ChatGroup,GroupMessage
 from django.utils import timezone
-from datetime import timedelta
-from .models import UserStatus
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
 from django.views.decorators.http import require_POST
-from .models import PushSubscription
+import json
 
 @login_required
 def index(request):
@@ -51,7 +45,7 @@ def index(request):
         chat_list.append(user)
 
     
-    chat_list.sort(key=lambda x: x.last_time if x.last_time else datetime.min.replace(tzinfo=timezone.UTC), reverse=True)
+    chat_list.sort(key=lambda x: x.last_time if x.last_time else datetime.min.replace(tzinfo=timezone.utc), reverse=True)
     print("--- DEBUG GROUPS --- :", my_groups)
     return render(request, 'chat/wp.html', {
         'users': chat_list, 
@@ -103,7 +97,7 @@ def settings_page(request):
 
 
 
-@csrf_exempt  # <-- THIS BYPASSES THE SECURITY BLOCK FOR TESTING
+@login_required
 def upload_image(request):
     if request.method == 'POST' and request.FILES.get('image'):
         uploaded_file = request.FILES['image']
@@ -273,6 +267,7 @@ def signup(request):
 
 
 
+@login_required
 @require_POST
 def save_subscription(request):
     # Parse the token data sent from JavaScript

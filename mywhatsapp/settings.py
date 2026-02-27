@@ -34,6 +34,8 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 CSRF_TRUSTED_ORIGINS = [
     'https://mywhatsapp-rq86.onrender.com',
     'https://*.onrender.com',
+    'https://*.ngrok-free.app',
+    'https://*.ngrok.io',
 ]
 
 # Application definition
@@ -159,7 +161,6 @@ import os
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-CSRF_TRUSTED_ORIGINS = ['https://*.ngrok-free.app', 'https://*.ngrok.io']
 CLOUDINARY_STORAGE = {
     'CLOUD_NAME': 'danpxoafq',
     'API_KEY': '225756872153864',
@@ -167,12 +168,12 @@ CLOUDINARY_STORAGE = {
 }
 
 # This tells Django: "For all media files, send them to Cloudinary!"
-DEFAULT_FILE_STORAGE = 'cloudinary_storage.storage.MediaCloudinaryStorage'
+# DEFAULT_FILE_STORAGE is deprecated in Django 6.0, using STORAGES instead
 
 
 
 LOGIN_URL = 'signup'
 LOGIN_REDIRECT_URL = '/'
-VAPID_ADMIN_EMAIL ="mailto: <user@email.com>",
-VAPID_PUBLIC_KEY = "*****example_publicKey_*******",
+VAPID_ADMIN_EMAIL = "mailto:user@email.com"
+VAPID_PUBLIC_KEY = "*****example_publicKey_*******"
 VAPID_PRIVATE_KEY = "*****example_privateKey_*******"

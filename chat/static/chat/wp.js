@@ -695,8 +695,8 @@ window.subscribeToPush = function() {
         navigator.serviceWorker.ready.then(function(registration) {
             alert("2. Service Worker is ready. Asking browser for token...");
             
-            // 🛑 REMEMBER TO PASTE YOUR PUBLIC KEY HERE 🛑
-            const vapidPublicKey = "*****example_publicKey_*******"; 
+            // 🛑 REPLACE WITH YOUR ACTUAL VAPID PUBLIC KEY FROM settings.py 🛑
+            const vapidPublicKey = "*****example_publicKey_*******"; // TODO: Replace with real key 
             const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
 
             registration.pushManager.subscribe({
