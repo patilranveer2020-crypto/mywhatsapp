@@ -12,7 +12,6 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 import dj_database_url
-import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -22,7 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-@v7h*2oa#-5sn!9^_6#barng(n6tar3+dcn8k07-i!p7=onr=)')
+SECRET_KEY = 'django-insecure-@v7h*2oa#-5sn!9^_6#barng(n6tar3+dcn8k07-i!p7=onr=)'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
@@ -90,17 +89,18 @@ ASGI_APPLICATION = 'mywhatsapp.asgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
+"""
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
-}
+}"""
 
-# Use database from DATABASE_URL env var if available
-DATABASE_URL = os.environ.get('DATABASE_URL')
-if DATABASE_URL:
-    DATABASES['default'] = dj_database_url.parse(DATABASE_URL)
+# --- ADD NEW POSTGRESQL ---
+DATABASES = {
+    'default': dj_database_url.parse('postgresql://neondb_owner:npg_3nqvZCfQrE5L@ep-bold-pond-a15t85ch-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require')
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -163,9 +163,9 @@ import os
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME'),
-    'API_KEY': os.environ.get('CLOUDINARY_API_KEY'),
-    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET'),
+    'CLOUD_NAME': 'danpxoafq',
+    'API_KEY': '225756872153864',
+    'API_SECRET': 'Zh8eu8DJ87NiiivnF-NLsbJp05M',
 }
 
 # This tells Django: "For all media files, send them to Cloudinary!"
@@ -176,5 +176,5 @@ CLOUDINARY_STORAGE = {
 LOGIN_URL = 'signup'
 LOGIN_REDIRECT_URL = '/'
 VAPID_ADMIN_EMAIL = "mailto:user@example.com"
-VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY')
-VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY')
+VAPID_PUBLIC_KEY = "BDv_8GpAhI9rVLiBI4FIEGTHenv11_TT20YCx5kMjXp9r5xsVVdkq2ADWCoUXAo-DcUIPqPerjdp5EzyZIZqcE4"
+VAPID_PRIVATE_KEY = "oWrxJ-3onjmzH4x4uNr9owxlPjQK7Q6reK8YGu3KTrU"
