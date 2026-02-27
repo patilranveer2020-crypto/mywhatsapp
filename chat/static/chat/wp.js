@@ -762,43 +762,38 @@ function urlBase64ToUint8Array(base64String) {
     return outputArray;
 }
 
-// Test Push Notification function
-window.testPushNotification = function() {
-    // First test if local notifications work
-    if (Notification.permission === 'granted') {
-        // Try showing a local notification first
+// Check if user is already subscribed to push notifications
+function checkPushSubscription() {
+    const bellIcon = document.getElementById('enable-notif-btn');
+    const floatingBtn = document.getElementById('floating-notif-btn');
+    
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
         navigator.serviceWorker.ready.then(function(registration) {
-            registration.showNotification('Local Test', {
-                body: 'If you see this, notifications work!',
-                icon: '/static/icon-192.png'
+            registration.pushManager.getSubscription().then(function(subscription) {
+                if (subscription) {
+                    // User is already subscribed - hide button and update icon
+                    if (floatingBtn) {
+                        floatingBtn.style.display = 'none';
+                    }
+                    if (bellIcon) {
+                        bellIcon.classList.remove('fa-bell');
+                        bellIcon.classList.add('fa-bell-slash');
+                        bellIcon.style.color = "#25D366";
+                        bellIcon.title = "Notifications Enabled";
+                    }
+                }
             });
-            alert("Local notification sent! Did you see it?");
-        }).catch(err => {
-            alert("Service Worker Error: " + err);
-        });
-        
-        // Also send server push
-        fetch('/api/test-push/', {
-            method: 'GET',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken')
-            }
-        })
-        .then(res => res.json())
-        .then(data => {
-            console.log("Server push result:", data);
-        });
-    } else if (Notification.permission === 'denied') {
-        alert("Notifications are BLOCKED! Please enable them in browser settings.");
-    } else {
-        Notification.requestPermission().then(permission => {
-            if (permission === 'granted') {
-                testPushNotification();
-            } else {
-                alert("You need to allow notifications!");
-            }
         });
     }
+}
+
+// Run check on page load
+document.addEventListener('DOMContentLoaded', checkPushSubscription);
+
+// Test Push Notification function
+window.testPushNotification = function() {
+    // This was for debugging - can be removed in production
+    alert("This button is for testing only. Use the green bell button to enable notifications.");
 };
 
 // The function that asks the phone for a Push Token
