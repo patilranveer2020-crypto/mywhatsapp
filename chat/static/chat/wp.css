@@ -18,6 +18,8 @@ body { background: linear-gradient(to bottom, #00a884 127px, #d1d7db 127px); hei
 .header { height: 60px; background: #f0f2f5; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; position: relative; z-index: 10; }
 .my-avatar, .contact-avatar { width: 40px; height: 40px; border-radius: 50%; }
 .header-icons i { color: #54656f; margin-left: 20px; cursor: pointer; font-size: 20px; }
+.header-icons button { display: inline-flex; align-items: center; justify-content: center; }
+.header-icons button i { margin-left: 0; }
 
 .search-container { padding: 8px 12px; }
 .search-input { background: #f0f2f5; border-radius: 8px; padding: 5px 15px; display: flex; align-items: center; }

@@ -753,8 +753,26 @@ function urlBase64ToUint8Array(base64String) {
 // The function that asks the phone for a Push Token
 window.subscribeToPush = function() {
     const bellIcon = document.getElementById('enable-notif-btn');
+    const bellButton = bellIcon ? bellIcon.closest('button') : null;
     
-    if ('serviceWorker' in navigator && 'PushManager' in window) {
+    // Check if already subscribed
+    if (bellIcon && bellIcon.classList.contains('fa-bell-slash')) {
+        window.showPersistentNotification("Already Enabled", "Push notifications are already enabled!");
+        return;
+    }
+    
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+        alert("Your browser doesn't support push notifications.");
+        return;
+    }
+    
+    // Request notification permission first
+    Notification.requestPermission().then(permission => {
+        if (permission !== 'granted') {
+            alert('Please allow notification permission in your browser settings to receive push notifications.');
+            return;
+        }
+        
         navigator.serviceWorker.ready.then(function(registration) {
             
             // VAPID Public Key for Push Notifications
@@ -781,20 +799,23 @@ window.subscribeToPush = function() {
                         if (bellIcon) {
                             bellIcon.classList.remove('fa-bell');
                             bellIcon.classList.add('fa-bell-slash');
-                            bellIcon.title = "Notifications Enabled";
                             bellIcon.style.color = "#25D366";
+                        }
+                        if (bellButton) {
+                            bellButton.title = "Notifications Enabled";
                         }
                         window.showPersistentNotification("Notifications Enabled", "You'll receive notifications even when the app is closed!");
                     }
                 })
-                .catch(err => console.error("Server Error:", err));
+                .catch(err => {
+                    console.error("Server Error:", err);
+                    alert('Failed to save subscription. Please try again.');
+                });
 
             }).catch(function(err) {
                 console.error('Push subscription failed:', err);
-                alert('Failed to enable notifications. Please allow notification permission in your browser settings.');
+                alert('Failed to enable push notifications. Please try again.');
             });
         });
-    } else {
-        alert("Your browser doesn't support push notifications.");
-    }
+    });
 };
