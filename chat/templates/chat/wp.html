@@ -37,11 +37,11 @@
     
 
     <div id="top-notification" class="top-notification" style="display: none;">
-    <div class="notification-content">
-        <span id="notif-sender" class="notif-sender">New Message</span>: 
-        <span id="notif-text" class="notif-text">...</span>
-    </div>
-    <button onclick="markAsRead()" class="mark-read-btn">Mark as Read</button>
+        <div class="notification-content">
+            <span id="notif-sender" class="notif-sender">New Message</span>: 
+            <span id="notif-text" class="notif-text">...</span>
+        </div>
+        <button onclick="dismissNotification()" class="mark-read-btn">Dismiss</button>
     </div>
     
     <input type="hidden" id="current-username" value="{{ user.username }}">
@@ -280,6 +280,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@3.1.1/dist/index.min.js"></script>
-    <script src="{% static 'chat/wp.js' %}?v=4"></script>
+    <script src="{% static 'chat/wp.js' %}?v=5"></script>
 </body>
 </html>

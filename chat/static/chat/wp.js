@@ -2,6 +2,66 @@ let chatSocket = null;
 let activeUserId = null;
 let lastSeenDate = null;
 
+// ==========================================
+// NOTIFICATION SOUND & POPUP SYSTEM
+// ==========================================
+const notificationSound = new Audio('https://assets.mixkit.co/active_storage/sfx/2354/2354-preview.mp3');
+let notificationPermission = false;
+
+// Request notification permission on load
+if ("Notification" in window) {
+    Notification.requestPermission().then(permission => {
+        notificationPermission = permission === "granted";
+    });
+}
+
+// Play notification sound
+window.playNotificationSound = function() {
+    notificationSound.currentTime = 0;
+    notificationSound.play().catch(e => console.log('Sound play failed:', e));
+};
+
+// Show browser notification (works when minimized/closed)
+window.showBrowserNotification = function(senderName, messageText, senderId) {
+    // Always show in-app banner
+    window.showPersistentNotification(senderName, messageText);
+    
+    // Play sound
+    window.playNotificationSound();
+    
+    // Show system notification if permitted and tab is hidden
+    if (notificationPermission && document.hidden) {
+        const notification = new Notification(senderName || "New Message", {
+            body: messageText.length > 50 ? messageText.substring(0, 50) + '...' : messageText,
+            icon: '/static/icon-192.png',
+            badge: '/static/icon-192.png',
+            tag: 'whatsapp-message-' + senderId,
+            requireInteraction: false,
+            silent: false
+        });
+        
+        notification.onclick = function() {
+            window.focus();
+            if (senderId) {
+                startChat(senderId, senderName);
+            }
+            this.close();
+        };
+    }
+};
+
+// Dismiss the notification banner
+window.dismissNotification = function() {
+    const topNotification = document.getElementById('top-notification');
+    if (topNotification) {
+        topNotification.classList.add('hiding');
+        setTimeout(() => {
+            topNotification.style.display = 'none';
+            topNotification.classList.remove('hiding');
+        }, 300);
+    }
+};
+
 
 
 
@@ -9,28 +69,33 @@ let lastSeenDate = null;
 // 0. NOTIFICATION LOGIC
 // ==========================================
 window.showPersistentNotification = function(senderName, messageText) {
-    // 1. Show the Green UI Banner (For when they are staring at the app)
-    document.getElementById('notif-sender').innerText = senderName || "New Message";
-    let preview = messageText.length > 30 ? messageText.substring(0, 30) + '...' : messageText;
-    document.getElementById('notif-text').innerText = preview;
-    document.getElementById('top-notification').style.display = 'flex';
-
-    // 2. Fire the OS System Notification (For when they are on another tab/minimized)
-    if ("Notification" in window && Notification.permission === "granted") {
-        // 'document.hidden' checks if the user is currently looking at a different tab or app
-        if (document.hidden) { 
-            const osNotification = new Notification(senderName || "New Message", {
-                body: messageText,
-                icon: '/static/icon-192.png' // Uses the mobile app icon you made earlier!
-            });
-            
-            // If they click the OS notification, it brings them back to your chat tab!
-            osNotification.onclick = function() {
-                window.focus();
-                this.close();
-            };
-        }
+    // Show the Green UI Banner (For when they are staring at the app)
+    const notifSender = document.getElementById('notif-sender');
+    const notifText = document.getElementById('notif-text');
+    const topNotification = document.getElementById('top-notification');
+    
+    if (!topNotification) return;
+    
+    // Clear any existing hide timeout
+    if (topNotification.hideTimeout) {
+        clearTimeout(topNotification.hideTimeout);
     }
+    
+    // Remove hiding class if present
+    topNotification.classList.remove('hiding');
+    
+    if (notifSender) notifSender.innerText = senderName || "New Message";
+    if (notifText) {
+        let preview = messageText.length > 30 ? messageText.substring(0, 30) + '...' : messageText;
+        notifText.innerText = preview;
+    }
+    
+    topNotification.style.display = 'flex';
+    
+    // Auto-hide after 5 seconds with animation
+    topNotification.hideTimeout = setTimeout(() => {
+        window.dismissNotification();
+    }, 5000);
 };
 
 // ==========================================
@@ -132,10 +197,9 @@ window.startGroupChat = function(groupId, groupName) {
         actualChatContainer.innerHTML += messageHtml;
         actualChatContainer.scrollTop = actualChatContainer.scrollHeight;
 
-        // 👉 TRIGGER BANNER ONLY IF SOMEONE ELSE SENT IT
+        // 👉 TRIGGER NOTIFICATION WITH SOUND ONLY IF SOMEONE ELSE SENT IT
         if (!isMe) {
-            window.playNotificationSound();
-            window.showPersistentNotification(data.sender_name, data.message);
+            window.showBrowserNotification(data.sender_name, data.message, null);
         }
     };
 };
@@ -243,10 +307,9 @@ window.startChat = function(userId, username) {
         if (type === 'received') {
             chatSocket.send(JSON.stringify({ 'mark_read': true }));
             
-            // 👉 TRIGGER NOTIFICATION BANNER
-            window.playNotificationSound();
+            // 👉 TRIGGER NOTIFICATION WITH SOUND (works even when minimized)
             const senderName = data.sender_name || localStorage.getItem('activeChatName'); 
-            window.showPersistentNotification(senderName, data.message);
+            window.showBrowserNotification(senderName, data.message, activeUserId);
         }
     };
 

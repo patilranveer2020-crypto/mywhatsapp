@@ -215,16 +215,66 @@ body { background: linear-gradient(to bottom, #00a884 127px, #d1d7db 127px); hei
     top: 0;
     left: 0;
     width: 100%;
-    background-color: #25D366; /* WhatsApp Light Green */
+    background: linear-gradient(135deg, #25D366 0%, #128C7E 100%);
     color: white;
     padding: 15px 20px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    z-index: 9999; /* Ensures it stays on top of everything else */
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    z-index: 999999;
+    display: flex;
     justify-content: space-between;
     align-items: center;
     box-sizing: border-box;
-    font-family: Arial, sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    animation: slideDown 0.3s ease-out;
 }
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+}
+
+.top-notification.hiding {
+    animation: slideUp 0.3s ease-in forwards;
+}
+
+.notification-content {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.notification-content::before {
+    content: "\f0f3";
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    margin-right: 12px;
+    font-size: 20px;
+    animation: bellRing 0.5s ease-in-out;
+}
+
+@keyframes bellRing {
+    0%, 100% { transform: rotate(0); }
+    25% { transform: rotate(-15deg); }
+    75% { transform: rotate(15deg); }
+}
+
 .notif-sender {
     font-weight: bold;
     font-size: 16px;
@@ -232,17 +282,40 @@ body { background: linear-gradient(to bottom, #00a884 127px, #d1d7db 127px); hei
 .notif-text {
     font-size: 14px;
     margin-left: 5px;
+    opacity: 0.95;
 }
 .mark-read-btn {
-    background-color: white;
-    color: #075E54; /* WhatsApp Dark Green */
+    background-color: rgba(255,255,255,0.95);
+    color: #075E54;
     border: none;
     padding: 8px 15px;
-    border-radius: 5px;
-    font-weight: bold;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 13px;
     cursor: pointer;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    transition: all 0.2s ease;
+    margin-left: 15px;
 }
 .mark-read-btn:hover {
-    background-color: #f0f0f0;
+    background-color: white;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+
+/* Mobile adjustments for notification */
+@media (max-width: 768px) {
+    .top-notification {
+        padding: 12px 15px;
+    }
+    .notif-sender {
+        font-size: 14px;
+    }
+    .notif-text {
+        font-size: 12px;
+    }
+    .mark-read-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
 }
