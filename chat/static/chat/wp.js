@@ -764,15 +764,10 @@ function urlBase64ToUint8Array(base64String) {
 
 // The function that asks the phone for a Push Token
 window.subscribeToPush = function() {
-    console.log("Bell icon clicked!");
+    alert("Enabling notifications...");
     
     const bellIcon = document.getElementById('enable-notif-btn');
-    
-    // Check if already subscribed
-    if (bellIcon && bellIcon.classList.contains('fa-bell-slash')) {
-        window.showPersistentNotification("Already Enabled", "Push notifications are already enabled!");
-        return;
-    }
+    const floatingBtn = document.getElementById('floating-notif-btn');
     
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
         alert("Your browser doesn't support push notifications.");
@@ -782,7 +777,7 @@ window.subscribeToPush = function() {
     // Request notification permission first
     Notification.requestPermission().then(permission => {
         if (permission !== 'granted') {
-            alert('Please allow notification permission in your browser settings to receive push notifications.');
+            alert('Please allow notification permission to receive push notifications.');
             return;
         }
         
@@ -808,25 +803,32 @@ window.subscribeToPush = function() {
                 .then(res => res.json())
                 .then(data => {
                     if (data.status === 'success') {
-                        // Change bell icon to show notifications are enabled
+                        alert('SUCCESS! Notifications enabled!');
+                        
+                        // Hide floating button
+                        if (floatingBtn) {
+                            floatingBtn.style.display = 'none';
+                        }
+                        
+                        // Update bell icon
                         if (bellIcon) {
                             bellIcon.classList.remove('fa-bell');
                             bellIcon.classList.add('fa-bell-slash');
                             bellIcon.style.color = "#25D366";
-                            bellIcon.title = "Notifications Enabled";
                         }
-                        window.showPersistentNotification("Notifications Enabled", "You'll receive notifications even when the app is closed!");
+                    } else {
+                        alert('Error: ' + JSON.stringify(data));
                     }
                 })
                 .catch(err => {
-                    console.error("Server Error:", err);
-                    alert('Failed to save subscription. Please try again.');
+                    alert('Server Error: ' + err);
                 });
 
             }).catch(function(err) {
-                console.error('Push subscription failed:', err);
-                alert('Failed to enable push notifications. Please try again.');
+                alert('Push subscription failed: ' + err);
             });
+        }).catch(function(err) {
+            alert('Service Worker not ready: ' + err);
         });
     });
 };

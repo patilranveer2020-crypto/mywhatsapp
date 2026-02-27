@@ -47,6 +47,28 @@
     <input type="hidden" id="current-username" value="{{ user.username }}">
     <input type="hidden" id="current-user-id" value="{{ user.id }}">
     
+    <!-- FLOATING NOTIFICATION BUTTON -->
+    <button id="floating-notif-btn" onclick="subscribeToPush()" style="
+        position: fixed;
+        bottom: 80px;
+        right: 20px;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: #25D366;
+        color: white;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        cursor: pointer;
+        z-index: 999999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+    ">
+        <i class="fa-solid fa-bell"></i>
+    </button>
+    
     <div class="app-wrapper">
         <div class="app-container">
            
@@ -280,6 +302,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@3.1.1/dist/index.min.js"></script>
-    <script src="{% static 'chat/wp.js' %}?v=10"></script>
+    <script src="{% static 'chat/wp.js' %}?v=11"></script>
 </body>
 </html>
