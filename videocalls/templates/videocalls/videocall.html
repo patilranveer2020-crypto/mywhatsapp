@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Video Call</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+        #video-container {
+            display: flex;
+            position: relative;
+        }
+        #local-video {
+            width: 200px;
+            height: 150px;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            border: 1px solid #ccc;
+        }
+        #remote-video {
+            width: 800px;
+            height: 600px;
+            border: 1px solid #ccc;
+        }
+        #call-controls {
+            margin-top: 20px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Video Call</h1>
+    <div id="video-container">
+        <video id="local-video" autoplay muted></video>
+        <video id="remote-video" autoplay></video>
+    </div>
+    <div id="call-controls">
+        <button id="mute-btn">Mute</button>
+        <button id="hangup-btn">Hang Up</button>
+    </div>
+
+    <script>
+        const is_caller = {{ is_caller }};
+        const room_id = "{{ room_id }}";
+        const user_id = "{{ user.id }}";
+        const target_user_id = "{{ target_user.id }}";
+        let localStream;
+        let remoteStream;
+        let peerConnection;
+        const socket = new WebSocket(`ws://${window.location.host}/ws/videocall/`);
+
+        const localVideo = document.getElementById('local-video');
+        const remoteVideo = document.getElementById('remote-video');
+        const muteBtn = document.getElementById('mute-btn');
+        const hangupBtn = document.getElementById('hangup-btn');
+
+        const servers = {
+            iceServers: [
+                {
+                    urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302']
+                }
+            ]
+        };
+
+        socket.onopen = () => {
+            console.log("WebSocket connection opened");
+            if (is_caller) {
+                initiateCall();
+            }
+        };
+
+        socket.onmessage = async (event) => {
+            const data = JSON.parse(event.data);
+            console.log("Received message: ", data);
+
+            switch(data.type) {
+                case 'webrtc_offer':
+                    await handleOffer(data.offer, data.from_user_id);
+                    break;
+                case 'webrtc_answer':
+                    await handleAnswer(data.answer);
+                    break;
+                case 'webrtc_ice_candidate':
+                    await handleIceCandidate(data.candidate);
+                    break;
+                case 'call_ended':
+                    endCall();
+                    break;
+            }
+        };
+
+        const initiateCall = async () => {
+            peerConnection = new RTCPeerConnection(servers);
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            localVideo.srcObject = localStream;
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+            peerConnection.onicecandidate = event => {
+                if (event.candidate) {
+                    socket.send(JSON.stringify({
+                        'type': 'webrtc_ice_candidate',
+                        'candidate': event.candidate,
+                        'target_user_id': target_user_id,
+                        'room_id': room_id
+                    }));
+                }
+            };
+
+            peerConnection.ontrack = event => {
+                remoteVideo.srcObject = event.streams[0];
+            };
+
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+
+            socket.send(JSON.stringify({
+                'type': 'webrtc_offer',
+                'offer': offer,
+                'target_user_id': target_user_id,
+                'room_id': room_id
+            }));
+        };
+
+        const handleOffer = async (offer, from_user_id) => {
+            peerConnection = new RTCPeerConnection(servers);
+            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            localVideo.srcObject = localStream;
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+            peerConnection.onicecandidate = event => {
+                if (event.candidate) {
+                    socket.send(JSON.stringify({
+                        'type': 'webrtc_ice_candidate',
+                        'candidate': event.candidate,
+                        'target_user_id': from_user_id,
+                        'room_id': room_id
+                    }));
+                }
+            };
+
+            peerConnection.ontrack = event => {
+                remoteVideo.srcObject = event.streams[0];
+            };
+
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+
+            socket.send(JSON.stringify({
+                'type': 'webrtc_answer',
+                'answer': answer,
+                'target_user_id': from_user_id,
+                'room_id': room_id
+            }));
+        };
+
+        const handleAnswer = async (answer) => {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+        };
+
+        const handleIceCandidate = async (candidate) => {
+            await peerConnection.addIceCandidate(candidate);
+        };
+
+        window.addEventListener('beforeunload', () => {
+            socket.send(JSON.stringify({
+                'type': 'call_end',
+                'room_id': room_id,
+                'target_user_id': target_user_id
+            }));
+        });
+
+        const endCall = () => {
+            if (peerConnection) {
+                peerConnection.close();
+            }
+            localStream.getTracks().forEach(track => track.stop());
+            window.close();
+        };
+
+        hangupBtn.addEventListener('click', () => {
+            socket.send(JSON.stringify({
+                'type': 'call_end',
+                'room_id': room_id,
+                'target_user_id': target_user_id
+            }));
+            endCall();
+        });
+
+        muteBtn.addEventListener('click', () => {
+            localStream.getAudioTracks()[0].enabled = !localStream.getAudioTracks()[0].enabled;
+            muteBtn.textContent = localStream.getAudioTracks()[0].enabled ? 'Mute' : 'Unmute';
+        });
+
+    </script>
+</body>
+</html>

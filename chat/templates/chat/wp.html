@@ -6,6 +6,7 @@
     <link rel="icon" href="data:,">
     <meta charset="UTF-8">
     
+    
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
     <title>WhatsApp Clone</title>
@@ -133,7 +134,7 @@
                     </div>
 
                     {% for user in users %}
-                    <div class="chat-item" onclick="startChat('{{ user.id }}', '{{ user.username|escapejs }}')">
+                    <div class="chat-item" onclick="startChat('{{ user.id }}', '{{ user.username|escapejs }}')" data-user-id="{{ user.id }}">
                         {% if user.unread_count > 0 %}
                             <span class="unread-badge" id="badge-{{ user.id }}">
                         {{ user.unread_count }}
@@ -182,6 +183,7 @@
         </div>
         
         <div class="header-icons">
+            <i class="fa-solid fa-video" id="video-call-btn" title="Start Video Call"></i>
             <i class="fa-solid fa-magnifying-glass"></i>
             <i class="fa-solid fa-ellipsis-vertical" id="menu-btn"></i>
         </div>
@@ -303,5 +305,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@3.1.1/dist/index.min.js"></script>
     <script src="{% static 'chat/wp.js' %}?v=16"></script>
+    <script src="{% static 'chat/videocall.js' %}?v=1"></script>
 </body>
 </html>

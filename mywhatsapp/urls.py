@@ -50,6 +50,9 @@ urlpatterns = [
 
     path('api/save-subscription/', views.save_subscription, name='save_subscription'),
     path('api/test-push/', views.test_push, name='test_push'),
+
+    # Video Call URLs
+    path('videocalls/', include('videocalls.urls')),
 ]
 
 # Keep your media settings for images

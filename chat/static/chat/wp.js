@@ -208,6 +208,14 @@ window.startGroupChat = function(groupId, groupName) {
 // 2. START PRIVATE CHAT FUNCTION
 // ==========================================
 window.startChat = function(userId, username) {
+    document.querySelectorAll('.chat-item').forEach(item => {
+        item.classList.remove('active');
+    });
+    const currentChatItem = document.querySelector(`.chat-item[data-user-id='${userId}']`);
+    if (currentChatItem) {
+        currentChatItem.classList.add('active');
+    }
+
     if ("Notification" in window && Notification.permission === "default") {
         Notification.requestPermission();
     }
