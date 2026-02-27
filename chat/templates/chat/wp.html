@@ -9,7 +9,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
     <title>WhatsApp Clone</title>
-    <link rel="stylesheet" href="{% static 'chat/wp.css' %}?v=100">
+    <link rel="stylesheet" href="{% static 'chat/wp.css' %}?v=101">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous">
     
     <link rel="manifest" href="{% static 'manifest.json' %}">
@@ -61,11 +61,11 @@
                     </a>
                     
                     <div class="header-icons">
-                        <i class="fa-solid fa-bell" id="enable-notif-btn" onclick="event.stopPropagation(); subscribeToPush();" style="cursor: pointer; color: #54656f; font-size: 20px; margin-left: 20px;" title="Enable Push Notifications"></i>
-                        <i class="fa-solid fa-users" id="create-group-btn" style="cursor: pointer;" title="Create Group"></i>
-                        <i class="fa-solid fa-circle-notch" id="status-btn" style="cursor: pointer;" title="Status"></i>
-                        <i class="fa-solid fa-message" id="new-chat-btn" style="cursor: pointer;" title="New Chat"></i>
-                        <i class="fa-solid fa-ellipsis-vertical" id="menu-btn" style="cursor: pointer;" title="Menu"></i>
+                        <i class="fa-solid fa-bell" id="enable-notif-btn" title="Enable Push Notifications"></i>
+                        <i class="fa-solid fa-users" id="create-group-btn" title="Create Group"></i>
+                        <i class="fa-solid fa-circle-notch" id="status-btn" title="Status"></i>
+                        <i class="fa-solid fa-message" id="new-chat-btn" title="New Chat"></i>
+                        <i class="fa-solid fa-ellipsis-vertical" id="menu-btn" title="Menu"></i>
                         
                         <div id="main-menu" class="dropdown-menu" style="display: none;">
                             <a href="{% url 'settings' %}"><i class="fa-solid fa-user"></i> Profile</a>
@@ -281,6 +281,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@3.1.1/dist/index.min.js"></script>
-    <script src="{% static 'chat/wp.js' %}?v=8"></script>
+    <script src="{% static 'chat/wp.js' %}?v=9"></script>
 </body>
 </html>

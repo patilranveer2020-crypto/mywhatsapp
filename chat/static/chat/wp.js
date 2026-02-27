@@ -472,6 +472,18 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
     document.addEventListener('click', () => { if (mainMenu) mainMenu.style.display = 'none'; });
+    
+    // BELL ICON - Enable Push Notifications
+    const bellIcon = document.getElementById('enable-notif-btn');
+    if (bellIcon) {
+        bellIcon.style.cursor = 'pointer';
+        bellIcon.addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            subscribeToPush();
+        });
+    }
+    
     if ("Notification" in window) {
         if (Notification.permission !== "granted" && Notification.permission !== "denied") {
             Notification.requestPermission().then(permission => {
