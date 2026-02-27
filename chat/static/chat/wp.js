@@ -764,25 +764,41 @@ function urlBase64ToUint8Array(base64String) {
 
 // Test Push Notification function
 window.testPushNotification = function() {
-    alert("Sending test push notification...");
-    
-    fetch('/api/test-push/', {
-        method: 'GET',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken')
-        }
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.status === 'success') {
-            alert("Test notification sent! Check your notifications.");
-        } else {
-            alert("Error: " + data.message);
-        }
-    })
-    .catch(err => {
-        alert("Error: " + err);
-    });
+    // First test if local notifications work
+    if (Notification.permission === 'granted') {
+        // Try showing a local notification first
+        navigator.serviceWorker.ready.then(function(registration) {
+            registration.showNotification('Local Test', {
+                body: 'If you see this, notifications work!',
+                icon: '/static/icon-192.png'
+            });
+            alert("Local notification sent! Did you see it?");
+        }).catch(err => {
+            alert("Service Worker Error: " + err);
+        });
+        
+        // Also send server push
+        fetch('/api/test-push/', {
+            method: 'GET',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(res => res.json())
+        .then(data => {
+            console.log("Server push result:", data);
+        });
+    } else if (Notification.permission === 'denied') {
+        alert("Notifications are BLOCKED! Please enable them in browser settings.");
+    } else {
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+                testPushNotification();
+            } else {
+                alert("You need to allow notifications!");
+            }
+        });
+    }
 };
 
 // The function that asks the phone for a Push Token
