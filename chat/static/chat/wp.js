@@ -752,21 +752,19 @@ function urlBase64ToUint8Array(base64String) {
 
 // The function that asks the phone for a Push Token
 window.subscribeToPush = function() {
-    alert("1. Starting subscription process...");
+    const bellIcon = document.getElementById('enable-notif-btn');
     
     if ('serviceWorker' in navigator && 'PushManager' in window) {
         navigator.serviceWorker.ready.then(function(registration) {
-            alert("2. Service Worker is ready. Asking browser for token...");
             
-            // 🛑 REPLACE WITH YOUR ACTUAL VAPID PUBLIC KEY FROM settings.py 🛑
-            const vapidPublicKey = "*****example_publicKey_*******"; // TODO: Replace with real key 
+            // VAPID Public Key for Push Notifications
+            const vapidPublicKey = "BDv_8GpAhI9rVLiBI4FIEGTHenv11_TT20YCx5kMjXp9r5xsVVdkq2ADWCoUXAo-DcUIPqPerjdp5EzyZIZqcE4"; 
             const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
 
             registration.pushManager.subscribe({
                 userVisibleOnly: true,
                 applicationServerKey: convertedVapidKey
             }).then(function(subscription) {
-                alert("3. SUCCESS! Got token from browser. Sending to Django...");
                 
                 fetch('/api/save-subscription/', {
                     method: 'POST',
@@ -777,16 +775,26 @@ window.subscribeToPush = function() {
                     body: JSON.stringify(subscription)
                 })
                 .then(res => res.json())
-                .then(data => alert("4. Django says: " + JSON.stringify(data)))
-                .catch(err => alert("4. Server Error: " + err));
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Change bell icon to show notifications are enabled
+                        if (bellIcon) {
+                            bellIcon.classList.remove('fa-bell');
+                            bellIcon.classList.add('fa-bell-slash');
+                            bellIcon.title = "Notifications Enabled";
+                            bellIcon.style.color = "#25D366";
+                        }
+                        window.showPersistentNotification("Notifications Enabled", "You'll receive notifications even when the app is closed!");
+                    }
+                })
+                .catch(err => console.error("Server Error:", err));
 
             }).catch(function(err) {
-                alert('ERROR getting token from browser: ' + err);
+                console.error('Push subscription failed:', err);
+                alert('Failed to enable notifications. Please allow notification permission in your browser settings.');
             });
-        }).catch(function(err) {
-            alert("ERROR with Service Worker: " + err);
         });
     } else {
-        alert("ERROR: This browser does not support Push Notifications.");
+        alert("Your browser doesn't support push notifications.");
     }
 };

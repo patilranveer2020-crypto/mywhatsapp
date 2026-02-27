@@ -174,6 +174,6 @@ CLOUDINARY_STORAGE = {
 
 LOGIN_URL = 'signup'
 LOGIN_REDIRECT_URL = '/'
-VAPID_ADMIN_EMAIL = "mailto:user@email.com"
-VAPID_PUBLIC_KEY = "*****example_publicKey_*******"
-VAPID_PRIVATE_KEY = "*****example_privateKey_*******"
+VAPID_ADMIN_EMAIL = "mailto:user@example.com"
+VAPID_PUBLIC_KEY = "BDv_8GpAhI9rVLiBI4FIEGTHenv11_TT20YCx5kMjXp9r5xsVVdkq2ADWCoUXAo-DcUIPqPerjdp5EzyZIZqcE4"
+VAPID_PRIVATE_KEY = "oWrxJ-3onjmzH4x4uNr9owxlPjQK7Q6reK8YGu3KTrU"
