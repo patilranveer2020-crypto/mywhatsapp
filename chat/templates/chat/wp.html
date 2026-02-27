@@ -9,7 +9,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
     <title>WhatsApp Clone</title>
-    <link rel="stylesheet" href="{% static 'chat/wp.css' %}?v=101">
+    <link rel="stylesheet" href="{% static 'chat/wp.css' %}?v=102">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" crossorigin="anonymous">
     
     <link rel="manifest" href="{% static 'manifest.json' %}">
@@ -66,8 +66,9 @@
                         <i class="fa-solid fa-circle-notch" id="status-btn" title="Status"></i>
                         <i class="fa-solid fa-message" id="new-chat-btn" title="New Chat"></i>
                         <i class="fa-solid fa-ellipsis-vertical" id="menu-btn" title="Menu"></i>
-                        
-                        <div id="main-menu" class="dropdown-menu" style="display: none;">
+                    </div>
+                    
+                    <div id="main-menu" class="dropdown-menu" style="display: none;">
                             <a href="{% url 'settings' %}"><i class="fa-solid fa-user"></i> Profile</a>
                             <a href="{% url 'settings' %}"><i class="fa-solid fa-gear"></i> Settings</a>
                             <hr style="border: 0; border-top: 1px solid #eee; margin: 5px 0;">
@@ -79,8 +80,6 @@
                                 </button>
                             </form>
                         </div>
-
-                    </div>
                 </header>
                 
                 <div class="search-container">
@@ -281,6 +280,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@3.1.1/dist/index.min.js"></script>
-    <script src="{% static 'chat/wp.js' %}?v=9"></script>
+    <script src="{% static 'chat/wp.js' %}?v=10"></script>
 </body>
 </html>
