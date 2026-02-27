@@ -283,3 +283,14 @@ def save_subscription(request):
         }
     )
     return JsonResponse({'status': 'success'})
+
+
+@login_required
+def test_push(request):
+    """Test endpoint to verify push notifications work"""
+    from .utils import send_push_notification
+    try:
+        send_push_notification(request.user, "Test Notification", "Push notifications are working!")
+        return JsonResponse({'status': 'success', 'message': 'Test notification sent!'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})

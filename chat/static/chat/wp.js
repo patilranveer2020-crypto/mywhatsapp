@@ -762,6 +762,29 @@ function urlBase64ToUint8Array(base64String) {
     return outputArray;
 }
 
+// Test Push Notification function
+window.testPushNotification = function() {
+    alert("Sending test push notification...");
+    
+    fetch('/api/test-push/', {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.status === 'success') {
+            alert("Test notification sent! Check your notifications.");
+        } else {
+            alert("Error: " + data.message);
+        }
+    })
+    .catch(err => {
+        alert("Error: " + err);
+    });
+};
+
 // The function that asks the phone for a Push Token
 window.subscribeToPush = function() {
     alert("Enabling notifications...");

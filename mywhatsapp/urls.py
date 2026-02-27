@@ -46,6 +46,7 @@ urlpatterns = [
     path('api/status/delete/<int:status_id>/', views.delete_status, name='delete_status'),
 
     path('api/save-subscription/', views.save_subscription, name='save_subscription'),
+    path('api/test-push/', views.test_push, name='test_push'),
 ]
 
 # Keep your media settings for images
