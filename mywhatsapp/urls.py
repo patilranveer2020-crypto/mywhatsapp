@@ -22,6 +22,9 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
+    # Service Worker (must be at root for full scope)
+    path('sw.js', views.service_worker, name='service_worker'),
+    
     # Admin Panel
     path('admin/', admin.site.urls),
     

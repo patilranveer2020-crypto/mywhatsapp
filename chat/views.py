@@ -3,7 +3,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
 from django.db.models import Q
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.core.files.storage import default_storage
 from .models import Message, Profile, ChatGroup, GroupMessage, UserStatus, PushSubscription
 from .forms import ProfileUpdateForm
@@ -12,6 +12,55 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
 from django.views.decorators.http import require_POST
 import json
+
+
+def service_worker(request):
+    """Serve Service Worker from root URL to allow full scope"""
+    sw_code = '''
+const CACHE_NAME = 'mywhatsapp-v3';
+
+self.addEventListener('install', event => {
+    self.skipWaiting();
+});
+
+self.addEventListener('activate', event => {
+    event.waitUntil(clients.claim());
+});
+
+self.addEventListener('push', function(event) {
+    let data = {};
+    if (event.data) {
+        try {
+            data = event.data.json();
+        } catch(e) {
+            data = { title: 'New Message', body: event.data.text() };
+        }
+    }
+    
+    const title = data.title || 'New Message';
+    const options = {
+        body: data.body || 'You have a new message',
+        icon: '/static/icon-192.png',
+        badge: '/static/icon-192.png',
+        vibrate: [200, 100, 200],
+        tag: 'message-notification',
+        data: { url: '/' }
+    };
+    
+    event.waitUntil(
+        self.registration.showNotification(title, options)
+    );
+});
+
+self.addEventListener('notificationclick', function(event) {
+    event.notification.close();
+    event.waitUntil(
+        clients.openWindow(event.notification.data.url || '/')
+    );
+});
+'''
+    return HttpResponse(sw_code, content_type='application/javascript')
+
 
 @login_required
 def index(request):
