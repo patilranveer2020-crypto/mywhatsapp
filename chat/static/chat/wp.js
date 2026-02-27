@@ -803,8 +803,6 @@ window.testPushNotification = function() {
 
 // The function that asks the phone for a Push Token
 window.subscribeToPush = function() {
-    alert("Enabling notifications...");
-    
     const bellIcon = document.getElementById('enable-notif-btn');
     const floatingBtn = document.getElementById('floating-notif-btn');
     
@@ -816,7 +814,7 @@ window.subscribeToPush = function() {
     // Request notification permission first
     Notification.requestPermission().then(permission => {
         if (permission !== 'granted') {
-            alert('Please allow notification permission to receive push notifications.');
+            alert('Please allow notification permission to receive messages when app is closed.');
             return;
         }
         
@@ -842,8 +840,6 @@ window.subscribeToPush = function() {
                 .then(res => res.json())
                 .then(data => {
                     if (data.status === 'success') {
-                        alert('SUCCESS! Notifications enabled!');
-                        
                         // Hide floating button
                         if (floatingBtn) {
                             floatingBtn.style.display = 'none';
@@ -855,19 +851,25 @@ window.subscribeToPush = function() {
                             bellIcon.classList.add('fa-bell-slash');
                             bellIcon.style.color = "#25D366";
                         }
+                        
+                        // Show success notification
+                        window.showPersistentNotification("Notifications Enabled", "You'll receive messages even when app is closed!");
                     } else {
-                        alert('Error: ' + JSON.stringify(data));
+                        alert('Error enabling notifications. Please try again.');
                     }
                 })
                 .catch(err => {
-                    alert('Server Error: ' + err);
+                    console.error("Server Error:", err);
+                    alert('Failed to save subscription. Please try again.');
                 });
 
             }).catch(function(err) {
-                alert('Push subscription failed: ' + err);
+                console.error('Push subscription failed:', err);
+                alert('Failed to enable notifications. Please try again.');
             });
         }).catch(function(err) {
-            alert('Service Worker not ready: ' + err);
+            console.error('Service Worker not ready:', err);
+            alert('Service Worker not ready. Please refresh and try again.');
         });
     });
 };
