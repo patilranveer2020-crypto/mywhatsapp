@@ -61,9 +61,7 @@
                     </a>
                     
                     <div class="header-icons">
-                        <button onclick="subscribeToPush()" style="background: none; border: none; padding: 0; cursor: pointer; margin-left: 20px;" title="Enable Push Notifications">
-                            <i class="fa-solid fa-bell" id="enable-notif-btn" style="color: #54656f; font-size: 20px;"></i>
-                        </button>
+                        <i class="fa-solid fa-bell" id="enable-notif-btn" onclick="event.stopPropagation(); subscribeToPush();" style="cursor: pointer; color: #54656f; font-size: 20px; margin-left: 20px;" title="Enable Push Notifications"></i>
                         <i class="fa-solid fa-users" id="create-group-btn" style="cursor: pointer;" title="Create Group"></i>
                         <i class="fa-solid fa-circle-notch" id="status-btn" style="cursor: pointer;" title="Status"></i>
                         <i class="fa-solid fa-message" id="new-chat-btn" style="cursor: pointer;" title="New Chat"></i>
@@ -283,6 +281,6 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@3.1.1/dist/index.min.js"></script>
-    <script src="{% static 'chat/wp.js' %}?v=7"></script>
+    <script src="{% static 'chat/wp.js' %}?v=8"></script>
 </body>
 </html>

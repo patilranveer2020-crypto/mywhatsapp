@@ -752,8 +752,9 @@ function urlBase64ToUint8Array(base64String) {
 
 // The function that asks the phone for a Push Token
 window.subscribeToPush = function() {
+    console.log("Bell icon clicked!");
+    
     const bellIcon = document.getElementById('enable-notif-btn');
-    const bellButton = bellIcon ? bellIcon.closest('button') : null;
     
     // Check if already subscribed
     if (bellIcon && bellIcon.classList.contains('fa-bell-slash')) {
@@ -800,9 +801,7 @@ window.subscribeToPush = function() {
                             bellIcon.classList.remove('fa-bell');
                             bellIcon.classList.add('fa-bell-slash');
                             bellIcon.style.color = "#25D366";
-                        }
-                        if (bellButton) {
-                            bellButton.title = "Notifications Enabled";
+                            bellIcon.title = "Notifications Enabled";
                         }
                         window.showPersistentNotification("Notifications Enabled", "You'll receive notifications even when the app is closed!");
                     }
