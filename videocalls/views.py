@@ -11,15 +11,22 @@ import uuid
 import json
 
 @login_required
-def video_call(request, room_id):
+def video_room(request, room_id):
     """Video call view"""
-    video_call = get_object_or_404(VideoCall, room_id=room_id)
-    target_user = video_call.caller if video_call.callee == request.user else video_call.callee
-    is_caller = json.dumps(video_call.caller == request.user)
+    try:
+        # Try to find the call in the database
+        video_call = VideoCall.objects.get(room_id=room_id)
+        target_user = video_call.caller if video_call.callee == request.user else video_call.callee
+        is_caller = (video_call.caller == request.user)
+    except VideoCall.DoesNotExist:
+        # If the DB is too slow, don't crash! Just read the URL parameter instead.
+        target_user = None
+        is_caller = request.GET.get('caller', '0') == '1'
+    
     context = {
         'room_id': room_id,
         'target_user': target_user,
-        'is_caller': is_caller
+        'is_caller': json.dumps(is_caller)
     }
     return render(request, 'videocalls/videocall.html', context)
 

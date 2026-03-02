@@ -263,7 +263,8 @@ window.startChat = function(userId, username) {
                 // Show a popup to the friend
                 let acceptCall = confirm(`🎥 Incoming Video Call from ${data.caller_name}! Do you want to answer?`);
                 if (acceptCall) {
-                    window.location.href = `/videocalls/${data.room_id}/`;
+                   // Add ?caller=0 because your friend is ANSWERING the call
+                   window.location.href = `/videocalls/${data.room_id}/?caller=0`;
                 }
             }
             return; // Stop here so it doesn't print as a text message
@@ -375,7 +376,8 @@ window.ringFriend = function() {
         }));
         
         // 3. Jump to the video call page yourself!
-        window.location.href = `/videocalls/${callRoomId}/`; 
+        // Add ?caller=1 because YOU are making the call
+        window.location.href = `/videocalls/${callRoomId}/?caller=1`; 
     } else {
         alert("Chat connection is offline. Cannot start call.");
     }

@@ -7,5 +7,5 @@ urlpatterns = [
     path('initiate/', views.initiate_video_call, name='initiate_video_call'),
     path('active/', views.get_active_calls, name='get_active_calls'),
     path('history/', views.get_call_history, name='get_call_history'),
-    path('<str:room_id>/', views.video_call, name='video_call'),
+    path('<str:room_id>/', views.video_room, name='video_room'),
 ]
