@@ -51,14 +51,15 @@
     </div>
 
     <script>
-        const is_caller = {{ is_caller }};
+        const is_caller = "{{ is_caller }}";
         const room_id = "{{ room_id }}";
         const user_id = "{{ user.id }}";
         const target_user_id = "{{ target_user.id }}";
         let localStream;
         let remoteStream;
         let peerConnection;
-        const socket = new WebSocket(`ws://${window.location.host}/ws/videocall/`);
+        const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+        const socket = new WebSocket(`${wsScheme}://${window.location.host}/ws/videocall/`);
 
         const localVideo = document.getElementById('local-video');
         const remoteVideo = document.getElementById('remote-video');
@@ -101,36 +102,47 @@
         };
 
         const initiateCall = async () => {
-            peerConnection = new RTCPeerConnection(servers);
-            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            localVideo.srcObject = localStream;
-            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+    peerConnection = new RTCPeerConnection(servers);
 
-            peerConnection.onicecandidate = event => {
-                if (event.candidate) {
-                    socket.send(JSON.stringify({
-                        'type': 'webrtc_ice_candidate',
-                        'candidate': event.candidate,
-                        'target_user_id': target_user_id,
-                        'room_id': room_id
-                    }));
-                }
-            };
+    // 1. Get the camera stream FIRST
+    try {
+        localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        localVideo.srcObject = localStream;
+        localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+    } catch (error) {
+        console.error("Camera error:", error);
+        alert("Could not access camera. Please allow permissions.");
+        return; // Stop the call if no camera
+    }
 
-            peerConnection.ontrack = event => {
-                remoteVideo.srcObject = event.streams[0];
-            };
-
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-
+    // 2. Setup Ice Candidates
+    peerConnection.onicecandidate = event => {
+        if (event.candidate) {
             socket.send(JSON.stringify({
-                'type': 'webrtc_offer',
-                'offer': offer,
+                'type': 'webrtc_ice_candidate',
+                'candidate': event.candidate,
                 'target_user_id': target_user_id,
                 'room_id': room_id
             }));
-        };
+        }
+    };
+
+    // 3. Listen for the remote video
+    peerConnection.ontrack = event => {
+        remoteVideo.srcObject = event.streams[0];
+    };
+
+    // 4. Create the offer
+    const offer = await peerConnection.createOffer();
+    await peerConnection.setLocalDescription(offer);
+
+    socket.send(JSON.stringify({
+        'type': 'webrtc_offer',
+        'offer': offer,
+        'target_user_id': target_user_id,
+        'room_id': room_id
+    }));
+};
 
         const handleOffer = async (offer, from_user_id) => {
             peerConnection = new RTCPeerConnection(servers);

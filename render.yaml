@@ -3,7 +3,7 @@ services:
     name: mywhatsapp
     env: python
     buildCommand: "./build.sh"
-    startCommand: "daphne -p $PORT mywhatsapp.asgi:application"
+    startCommand: "daphne -b 0.0.0.0 -p $PORT mywhatsapp.asgi:application"
     envVars:
       - key: SECRET_KEY
         generateValue: true

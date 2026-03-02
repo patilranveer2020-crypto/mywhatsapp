@@ -4,7 +4,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let signalingSocket;
 
     function setupWebSocket() {
-        signalingSocket = new WebSocket(`wss://${window.location.host}/ws/videocall/`);
+        const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
+        signalingSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/videocall/`);
 
         signalingSocket.onopen = () => {
             console.log('Video call signaling socket connected.');
@@ -56,35 +57,39 @@ document.addEventListener('DOMContentLoaded', function() {
         alert(`${data.callee_username} rejected your call.`);
     }
 
-    videoCallButton.addEventListener('click', () => {
-        const toUserId = getActiveChatUserId();
-        if (toUserId) {
-            fetch('/videocalls/initiate/', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
-                },
-                body: JSON.stringify({
-                    to_user_id: toUserId
+    if (videoCallButton) {
+        videoCallButton.addEventListener('click', () => {
+            const toUserId = getActiveChatUserId();
+            if (toUserId) {
+                fetch('/videocalls/initiate/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        to_user_id: toUserId
+                    })
                 })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    window.open(`/videocalls/${data.room_id}/`, '_blank');
-                    // Also send a WebSocket message to notify the other user
-                    signalingSocket.send(JSON.stringify({
-                        'type': 'call_invite',
-                        'to_user_id': toUserId,
-                        'room_id': data.room_id
-                    }));
-                } else {
-                    alert('Error initiating call: ' + data.message);
-                }
-            });
-        }
-    });
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        window.open(`/videocalls/${data.room_id}/`, '_blank');
+                        // Also send a WebSocket message to notify the other user
+                        if (signalingSocket.readyState === WebSocket.OPEN) {
+                            signalingSocket.send(JSON.stringify({
+                                'type': 'call_invite',
+                                'to_user_id': toUserId,
+                                'room_id': data.room_id
+                            }));
+                        }
+                    } else {
+                        alert('Error initiating call: ' + data.message);
+                    }
+                });
+            }
+        });
+    }
 
     function getActiveChatUserId() {
         const activeChatItem = document.querySelector('.chat-item.active');
