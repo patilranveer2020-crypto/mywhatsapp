@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/6.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
-
+import os
 from pathlib import Path
 import dj_database_url
 
@@ -21,12 +21,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-@v7h*2oa#-5sn!9^_6#barng(n6tar3+dcn8k07-i!p7=onr=)'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-@v7h*2oa#-5sn!9^_6#barng(n6tar3+dcn8k07-i!p7=onr=)')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 # Tell Django to trust Render's secure proxy
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
@@ -99,7 +99,7 @@ DATABASES = {
 
 # --- ADD NEW POSTGRESQL ---
 DATABASES = {
-    'default': dj_database_url.parse('postgresql://neondb_owner:npg_3nqvZCfQrE5L@ep-bold-pond-a15t85ch-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require')
+    'default': dj_database_url.parse(os.environ.get('DATABASE_URL'))
 }
 
 # Password validation
@@ -158,14 +158,13 @@ STORAGES = {
 }
 
 
-import os
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': 'danpxoafq',
-    'API_KEY': '225756872153864',
-    'API_SECRET': 'Zh8eu8DJ87NiiivnF-NLsbJp05M',
+    'CLOUD_NAME': os.environ.get('CLOUDINARY_CLOUD_NAME'),
+    'API_KEY': os.environ.get('CLOUDINARY_API_KEY'),
+    'API_SECRET': os.environ.get('CLOUDINARY_API_SECRET'),
 }
 
 # This tells Django: "For all media files, send them to Cloudinary!"
@@ -177,4 +176,4 @@ LOGIN_URL = 'signup'
 LOGIN_REDIRECT_URL = '/'
 VAPID_ADMIN_EMAIL = "mailto:user@example.com"
 VAPID_PUBLIC_KEY = "BDv_8GpAhI9rVLiBI4FIEGTHenv11_TT20YCx5kMjXp9r5xsVVdkq2ADWCoUXAo-DcUIPqPerjdp5EzyZIZqcE4"
-VAPID_PRIVATE_KEY = "oWrxJ-3onjmzH4x4uNr9owxlPjQK7Q6reK8YGu3KTrU"
+VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY')
