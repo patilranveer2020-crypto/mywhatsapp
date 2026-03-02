@@ -364,8 +364,8 @@ window.ringFriend = function() {
         return;
     }
     
-    // 1. Generate a unique room ID
-    const callRoomId = "call_" + Math.random().toString(36).substring(7);
+    // 👉 1. NEW: Generate an official mathematically valid UUID!
+    const callRoomId = crypto.randomUUID(); 
     
     // 2. Send the ringing signal through the chat socket
     if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
