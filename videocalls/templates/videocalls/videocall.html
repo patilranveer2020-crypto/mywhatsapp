@@ -52,7 +52,7 @@
 
     <script>
        // 1. Fixed the boolean trap so only ONE person initiates the call
-        const is_caller = "{{ is_caller }}";
+        const is_caller = "{{ is_caller|safe }}";
         const room_id = "{{ room_id }}";
         const user_id = "{{ user.id }}";
         
@@ -60,7 +60,6 @@
         let remoteStream;
         let peerConnection;
         
-        // 2. Added the room_id directly into the WebSocket connection!
         const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
         const socket = new WebSocket(`${wsScheme}://${window.location.host}/ws/videocall/${room_id}/`);
 
@@ -75,10 +74,21 @@
             ]
         };
 
-        socket.onopen = () => {
-            console.log("WebSocket connection opened in room:", room_id);
-            if (is_caller) {
-                initiateCall();
+        // 1. Get the camera first, THEN start talking to the server
+        socket.onopen = async () => {
+            console.log("WebSocket connected.");
+            
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                localVideo.srcObject = localStream;
+            } catch (error) {
+                alert("Camera access denied! Call cannot continue.");
+                return;
+            }
+
+            if (!is_caller) {
+                // 👉 The friend tells the caller: "I'm here, send the video offer!"
+                socket.send(JSON.stringify({ 'type': 'peer_ready' }));
             }
         };
 
@@ -87,6 +97,10 @@
             console.log("Received WebRTC Signal: ", data.type);
 
             switch(data.type) {
+                case 'peer_ready':
+                    // 👉 Caller hears the friend is ready, and starts the handshake!
+                    if (is_caller) initiateCall();
+                    break;
                 case 'webrtc_offer':
                     await handleOffer(data.offer);
                     break;
@@ -104,16 +118,9 @@
 
         const initiateCall = async () => {
             peerConnection = new RTCPeerConnection(servers);
-
-            try {
-                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                localVideo.srcObject = localStream;
-                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-            } catch (error) {
-                console.error("Camera error:", error);
-                alert("Could not access camera.");
-                return;
-            }
+            
+            // We already have the camera, just add the tracks!
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
             peerConnection.onicecandidate = event => {
                 if (event.candidate) {
@@ -139,15 +146,7 @@
 
         const handleOffer = async (offer) => {
             peerConnection = new RTCPeerConnection(servers);
-
-            try {
-                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                localVideo.srcObject = localStream;
-                localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-            } catch (error) {
-                console.error("Camera error:", error);
-                return;
-            }
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
 
             peerConnection.onicecandidate = event => {
                 if (event.candidate) {
@@ -180,7 +179,7 @@
             try {
                 await peerConnection.addIceCandidate(candidate);
             } catch(e) {
-                console.error("Error adding ice candidate", e);
+                console.log("ICE Error", e);
             }
         };
 

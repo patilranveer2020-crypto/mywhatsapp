@@ -11,17 +11,12 @@ class VideoCallConsumer(AsyncWebsocketConsumer):
         self.user = self.scope["user"]
         
         if self.user.is_authenticated:
-            # 1. Grab the shared room ID from the URL so BOTH users join the same room
             self.room_id = self.scope['url_route']['kwargs'].get('room_id')
             self.room_group_name = f'video_call_room_{self.room_id}'
-            
-            # 2. Keep the personal group just in case your invite system needs it
             self.personal_group_name = f'video_call_{self.user.id}'
             
-            # Join both groups
             await self.channel_layer.group_add(self.room_group_name, self.channel_name)
             await self.channel_layer.group_add(self.personal_group_name, self.channel_name)
-            
             await self.accept()
         else:
             await self.close()
@@ -39,17 +34,19 @@ class VideoCallConsumer(AsyncWebsocketConsumer):
             await self.handle_call_invite(text_data_json)
         elif message_type == 'call_response':
             await self.handle_call_response(text_data_json)
-        elif message_type == 'webrtc_ice_candidate': # Updated to match frontend
+        elif message_type == 'peer_ready': # 👉 NEW!
+            await self.handle_peer_ready(text_data_json)
+        elif message_type == 'webrtc_ice_candidate': 
             await self.handle_ice_candidate(text_data_json)
-        elif message_type == 'webrtc_offer': # Updated to match frontend
+        elif message_type == 'webrtc_offer': 
             await self.handle_offer(text_data_json)
-        elif message_type == 'webrtc_answer': # Updated to match frontend
+        elif message_type == 'webrtc_answer': 
             await self.handle_answer(text_data_json)
         elif message_type == 'call_end':
             await self.handle_call_end(text_data_json)
 
     # =======================================================
-    # DB LOGGING HANDLERS (Unchanged)
+    # DB LOGGING HANDLERS
     # =======================================================
     async def handle_call_invite(self, data):
         to_user_id = data['to_user_id']
@@ -128,7 +125,6 @@ class VideoCallConsumer(AsyncWebsocketConsumer):
         except VideoCall.DoesNotExist:
             pass
 
-        # Broadcast call end to the whole room
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -139,16 +135,24 @@ class VideoCallConsumer(AsyncWebsocketConsumer):
         )
 
     # =======================================================
-    # WEBRTC SIGNALING HANDLERS (Fixed!)
+    # WEBRTC SIGNALING HANDLERS
     # =======================================================
+    async def handle_peer_ready(self, data):
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'peer_ready',
+                'sender_channel_name': self.channel_name
+            }
+        )
+
     async def handle_offer(self, data):
-        # Broadcast the offer to the SHARED ROOM, not a specific user
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 'type': 'webrtc_offer',
                 'offer': data['offer'],
-                'sender_channel_name': self.channel_name # Keep track of who sent it
+                'sender_channel_name': self.channel_name 
             }
         )
 
@@ -175,8 +179,11 @@ class VideoCallConsumer(AsyncWebsocketConsumer):
     # =======================================================
     # ROOM BROADCAST DISPATCHERS
     # =======================================================
+    async def peer_ready(self, event):
+        if self.channel_name != event.get('sender_channel_name'):
+            await self.send(text_data=json.dumps({'type': 'peer_ready'}))
+
     async def webrtc_offer(self, event):
-        # Only send to the OTHER person in the room
         if self.channel_name != event.get('sender_channel_name'):
             await self.send(text_data=json.dumps({
                 'type': 'webrtc_offer',
@@ -199,11 +206,8 @@ class VideoCallConsumer(AsyncWebsocketConsumer):
 
     async def call_ended(self, event):
         if self.channel_name != event.get('sender_channel_name'):
-            await self.send(text_data=json.dumps({
-                'type': 'call_end'
-            }))
+            await self.send(text_data=json.dumps({'type': 'call_end'}))
             
-    # Keep your original DB invite dispatchers just in case
     async def incoming_call(self, event):
         await self.send(text_data=json.dumps(event))
 
