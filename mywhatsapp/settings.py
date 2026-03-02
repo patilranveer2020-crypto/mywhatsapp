@@ -10,6 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 import os
+import cloudinary
+import cloudinary.uploader
+import cloudinary.api
 from pathlib import Path
 import dj_database_url
 
@@ -162,9 +165,10 @@ STORAGES = {
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': os.environ.get('danpxoafq'),
-    'API_KEY': os.environ.get('225756872153864'),
-    'API_SECRET': os.environ.get('Zh8eu8DJ87NiiivnF-NLsbJp05M'),
+    'CLOUD_NAME':'danpxoafq',
+    'API_KEY': '225756872153864',
+    'API_SECRET':'Zh8eu8DJ87NiiivnF-NLsbJp05M',
+    'secure': True
 }
 
 # This tells Django: "For all media files, send them to Cloudinary!"
