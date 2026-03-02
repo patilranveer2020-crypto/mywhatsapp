@@ -254,6 +254,20 @@ window.startChat = function(userId, username) {
     chatSocket.onmessage = function(e) {
         const data = JSON.parse(e.data);
         const myId = document.getElementById('current-user-id').value;
+
+        if (data.type === 'incoming_video_call') {
+            if (String(data.caller_id) !== String(myId)) { 
+                // Play notification sound
+                window.playNotificationSound();
+                
+                // Show a popup to the friend
+                let acceptCall = confirm(`🎥 Incoming Video Call from ${data.caller_name}! Do you want to answer?`);
+                if (acceptCall) {
+                    window.location.href = `/videocalls/${data.room_id}/`;
+                }
+            }
+            return; // Stop here so it doesn't print as a text message
+        }
         
         // --- 1. INTERCEPT DELETED MESSAGE ---
         if (data.type === 'message_deleted') {
@@ -343,6 +357,29 @@ function sendMessage() {
         input.value = '';
     }
 }
+
+window.ringFriend = function() {
+    if (!activeUserId) {
+        alert("Please select a contact to call first!");
+        return;
+    }
+    
+    // 1. Generate a unique room ID
+    const callRoomId = "call_" + Math.random().toString(36).substring(7);
+    
+    // 2. Send the ringing signal through the chat socket
+    if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+        chatSocket.send(JSON.stringify({
+            'type': 'video_call_init',
+            'room_id': callRoomId
+        }));
+        
+        // 3. Jump to the video call page yourself!
+        window.location.href = `/videocalls/${callRoomId}/`; 
+    } else {
+        alert("Chat connection is offline. Cannot start call.");
+    }
+};
 
 window.deleteMessage = function(msgId) {
     if (confirm("Delete this message for everyone?")) {

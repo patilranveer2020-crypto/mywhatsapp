@@ -99,6 +99,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     }
                 )
                 return 
+            
+            if text_data_json.get('type') == 'video_call_init':
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'incoming_video_call',
+                        'caller_id': self.my_id,
+                        'caller_name': self.scope['user'].username,
+                        'room_id': text_data_json['room_id']
+                    }
+                )
+                return
 
             message_content = text_data_json['message']
 
@@ -136,7 +148,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
             
         except Exception as e:
             print(f"--- CRITICAL WEBSOCKET ERROR: {e} ---")
-   
+    
+    async def incoming_video_call(self, event):
+        await self.send(text_data=json.dumps({
+            'type': 'incoming_video_call',
+            'caller_id': event['caller_id'],
+            'caller_name': event['caller_name'],
+            'room_id': event['room_id']
+        }))
+
+
     async def chat_message(self, event):
         await self.send(text_data=json.dumps({
             'message_id': event['message_id'], 
