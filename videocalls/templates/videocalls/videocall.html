@@ -39,6 +39,9 @@
         }
     </style>
 </head>
+   <video id="local-video" autoplay playsinline muted style="width: 100%; max-width: 400px;"></video>
+
+   <video id="remote-video" autoplay playsinline style="width: 100%; max-width: 400px;"></video>
 <script>
         const is_caller = "{{ is_caller|safe }}";
         const room_id = "{{ room_id }}";
