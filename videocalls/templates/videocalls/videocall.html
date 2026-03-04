@@ -39,173 +39,40 @@
         }
     </style>
 </head>
-<body>
-    <h1>Video Call</h1>
-    <div id="video-container">
-        <video id="local-video" autoplay muted></video>
-        <video id="remote-video" autoplay></video>
-    </div>
-    <div id="call-controls">
-        <button id="mute-btn">Mute</button>
-        <button id="hangup-btn">Hang Up</button>
-    </div>
+<script>
+        // BREADCRUMB 1
+        alert("1. Script has started!");
 
-    <script>
-       // 1. Fixed the boolean trap so only ONE person initiates the call
         const is_caller = "{{ is_caller|safe }}";
         const room_id = "{{ room_id }}";
-        const user_id = "{{ user.id }}";
         
-        let localStream;
-        let remoteStream;
-        let peerConnection;
-        
+        // BREADCRUMB 2
+        alert("2. Variables loaded. is_caller = " + is_caller);
+
         const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
         const socket = new WebSocket(`${wsScheme}://${window.location.host}/ws/videocall/${room_id}/`);
 
-        const localVideo = document.getElementById('local-video');
-        const remoteVideo = document.getElementById('remote-video');
-        const muteBtn = document.getElementById('mute-btn');
-        const hangupBtn = document.getElementById('hangup-btn');
+        // BREADCRUMB 3
+        alert("3. Trying to connect to server...");
 
-        const servers = {
-            iceServers: [
-                { urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }
-            ]
-        };
-
-        // 1. Get the camera first, THEN start talking to the server
-        // 1. Get the camera first, THEN start talking to the server
-       // 1. Get the camera first, THEN start talking to the server
         socket.onopen = async () => {
-            console.log("WebSocket connected. Room ID:", room_id);
+            // BREADCRUMB 4
+            alert("4. WebSocket Connected to Server!");
             
             try {
-                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                localVideo.srcObject = localStream;
+                let localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                document.getElementById('local-video').srcObject = localStream;
+                
+                // BREADCRUMB 5
+                alert("5. Camera is ON! Sending Ready signal...");
+                
+                if (!is_caller) {
+                    socket.send(JSON.stringify({ 'type': 'peer_ready' }));
+                }
             } catch (error) {
-                // 👉 NEW: If the phone blocks the camera, it will scream the exact error at you!
-                alert("PHONE CAMERA ERROR: " + error.name + " - " + error.message);
-                return;
-            }
-
-            if (!is_caller) {
-                // 👉 NEW: If the phone succeeds, it will pop this up before sending the signal!
-                alert("PHONE SUCCESS: Camera is on! Sending 'Ready' signal to laptop...");
-                socket.send(JSON.stringify({ 'type': 'peer_ready' }));
-            } else {
-                console.log("I am the caller. Waiting for friend to send 'peer_ready'...");
+                alert("CAMERA DENIED: " + error.message);
             }
         };
-
-        socket.onmessage = async (event) => {
-            const data = JSON.parse(event.data);
-            console.log("Received WebRTC Signal: ", data.type);
-
-            switch(data.type) {
-                case 'peer_ready':
-                    // 👉 Caller hears the friend is ready, and starts the handshake!
-                    if (is_caller) initiateCall();
-                    break;
-                case 'webrtc_offer':
-                    await handleOffer(data.offer);
-                    break;
-                case 'webrtc_answer':
-                    await handleAnswer(data.answer);
-                    break;
-                case 'webrtc_ice_candidate':
-                    await handleIceCandidate(data.candidate);
-                    break;
-                case 'call_end':
-                    endCall();
-                    break;
-            }
-        };
-
-        const initiateCall = async () => {
-            peerConnection = new RTCPeerConnection(servers);
-            
-            // We already have the camera, just add the tracks!
-            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-            peerConnection.onicecandidate = event => {
-                if (event.candidate) {
-                    socket.send(JSON.stringify({
-                        'type': 'webrtc_ice_candidate',
-                        'candidate': event.candidate
-                    }));
-                }
-            };
-
-            peerConnection.ontrack = event => {
-                remoteVideo.srcObject = event.streams[0];
-            };
-
-            const offer = await peerConnection.createOffer();
-            await peerConnection.setLocalDescription(offer);
-
-            socket.send(JSON.stringify({
-                'type': 'webrtc_offer',
-                'offer': offer
-            }));
-        };
-
-        const handleOffer = async (offer) => {
-            peerConnection = new RTCPeerConnection(servers);
-            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
-
-            peerConnection.onicecandidate = event => {
-                if (event.candidate) {
-                    socket.send(JSON.stringify({
-                        'type': 'webrtc_ice_candidate',
-                        'candidate': event.candidate
-                    }));
-                }
-            };
-
-            peerConnection.ontrack = event => {
-                remoteVideo.srcObject = event.streams[0];
-            };
-
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
-            const answer = await peerConnection.createAnswer();
-            await peerConnection.setLocalDescription(answer);
-
-            socket.send(JSON.stringify({
-                'type': 'webrtc_answer',
-                'answer': answer
-            }));
-        };
-
-        const handleAnswer = async (answer) => {
-            await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
-        };
-
-        const handleIceCandidate = async (candidate) => {
-            try {
-                await peerConnection.addIceCandidate(candidate);
-            } catch(e) {
-                console.log("ICE Error", e);
-            }
-        };
-
-        const endCall = () => {
-            if (peerConnection) peerConnection.close();
-            if (localStream) localStream.getTracks().forEach(track => track.stop());
-            window.location.href = '/'; 
-        };
-
-        hangupBtn.addEventListener('click', () => {
-            socket.send(JSON.stringify({ 'type': 'call_end' }));
-            endCall();
-        });
-
-        muteBtn.addEventListener('click', () => {
-            const audioTrack = localStream.getAudioTracks()[0];
-            audioTrack.enabled = !audioTrack.enabled;
-            muteBtn.textContent = audioTrack.enabled ? 'Mute' : 'Unmute';
-        });
-
     </script>
 </body>
 </html>
