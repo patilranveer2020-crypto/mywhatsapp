@@ -3,22 +3,27 @@ from pywebpush import webpush, WebPushException
 from django.conf import settings
 from .models import PushSubscription # Adjust import if needed
 
+import json
+from pywebpush import webpush, WebPushException
+from django.conf import settings
+from .models import PushSubscription 
+
 def send_push_notification(user, title, message, extra_data=None):
+    print(f"🚨 DOORBELL TRIGGERED: Trying to wake up {user.username}'s phone!")
+    
     try:
-        # Find the device token for the user receiving the message
+        # Try to find the phone in the database
         subscription = PushSubscription.objects.get(user=user)
+        print("🚨 SUCCESS: Found their phone in the database! Sending signal...")
         
-        # Package the message
         push_data = {
             "title": title,
             "body": message
         }
         
-        # 👉 NEW: If we pass extra instructions (like video call info), attach them!
         if extra_data:
             push_data.update(extra_data)
         
-        # Format the token exactly how Google/Apple expects it
         sub_info = {
             "endpoint": subscription.endpoint,
             "keys": {
@@ -27,7 +32,6 @@ def send_push_notification(user, title, message, extra_data=None):
             }
         }
         
-        # Fire the notification into the cloud!
         webpush(
             subscription_info=sub_info,
             data=json.dumps(push_data),
@@ -36,11 +40,11 @@ def send_push_notification(user, title, message, extra_data=None):
                 "sub": settings.VAPID_ADMIN_EMAIL
             }
         )
+        print("🚨 SUCCESS: Signal sent to Google/Apple successfully!")
+        
     except PushSubscription.DoesNotExist:
-        # The user hasn't allowed notifications on their phone yet
-        pass
-    except WebPushException as ex:
-        print("Push failed:", repr(ex))
-        # If the token is expired, delete it so we don't keep trying
-        if ex.response and ex.response.status_code in [404, 410]:
-            subscription.delete()
+        # THE ALARM: This tells us if the phone never registered!
+        print(f"🚨 ERROR: Could not find {user.username}'s phone in the database. They need to 'Allow Notifications' on their device!")
+        
+    except Exception as ex:
+        print(f"🚨 CRITICAL ERROR: The push failed. Reason: {repr(ex)}")
