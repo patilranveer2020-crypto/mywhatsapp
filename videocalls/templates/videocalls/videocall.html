@@ -76,23 +76,22 @@
 
         // 1. Get the camera first, THEN start talking to the server
         // 1. Get the camera first, THEN start talking to the server
+       // 1. Get the camera first, THEN start talking to the server
         socket.onopen = async () => {
             console.log("WebSocket connected. Room ID:", room_id);
-            console.log("Am I the caller?", is_caller);
             
             try {
-                console.log("Requesting camera access...");
                 localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 localVideo.srcObject = localStream;
-                console.log("Camera acquired successfully!");
             } catch (error) {
-                console.error("Camera error:", error);
-                alert("Camera access denied! Call cannot continue.");
+                // 👉 NEW: If the phone blocks the camera, it will scream the exact error at you!
+                alert("PHONE CAMERA ERROR: " + error.name + " - " + error.message);
                 return;
             }
 
             if (!is_caller) {
-                console.log("I am the friend. Sending 'peer_ready' to the server...");
+                // 👉 NEW: If the phone succeeds, it will pop this up before sending the signal!
+                alert("PHONE SUCCESS: Camera is on! Sending 'Ready' signal to laptop...");
                 socket.send(JSON.stringify({ 'type': 'peer_ready' }));
             } else {
                 console.log("I am the caller. Waiting for friend to send 'peer_ready'...");
