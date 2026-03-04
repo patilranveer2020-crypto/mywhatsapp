@@ -40,39 +40,119 @@
     </style>
 </head>
 <script>
-        // BREADCRUMB 1
-        alert("1. Script has started!");
-
         const is_caller = "{{ is_caller|safe }}";
         const room_id = "{{ room_id }}";
         
-        // BREADCRUMB 2
-        alert("2. Variables loaded. is_caller = " + is_caller);
-
+        let localStream;
+        let peerConnection;
+        
         const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
         const socket = new WebSocket(`${wsScheme}://${window.location.host}/ws/videocall/${room_id}/`);
 
-        // BREADCRUMB 3
-        alert("3. Trying to connect to server...");
+        const localVideo = document.getElementById('local-video');
+        const remoteVideo = document.getElementById('remote-video');
+
+        const servers = {
+            iceServers: [
+                { urls: ['stun:stun1.l.google.com:19302', 'stun:stun2.l.google.com:19302'] }
+            ]
+        };
 
         socket.onopen = async () => {
-            // BREADCRUMB 4
-            alert("4. WebSocket Connected to Server!");
-            
             try {
-                let localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                document.getElementById('local-video').srcObject = localStream;
+                // Turn on the camera automatically
+                localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+                localVideo.srcObject = localStream;
                 
-                // BREADCRUMB 5
-                alert("5. Camera is ON! Sending Ready signal...");
-                
-                if (!is_caller) {
-                    socket.send(JSON.stringify({ 'type': 'peer_ready' }));
-                }
+                // 👉 NEW: EVERYONE announces when they enter the room
+                socket.send(JSON.stringify({ 'type': 'peer_ready' }));
             } catch (error) {
-                alert("CAMERA DENIED: " + error.message);
+                console.error("Camera access denied: ", error);
             }
         };
+
+        socket.onmessage = async (event) => {
+            const data = JSON.parse(event.data);
+            
+            switch(data.type) {
+                case 'peer_ready':
+                    if (is_caller && !peerConnection) {
+                        // Caller hears the friend and starts the video stream!
+                        initiateCall();
+                    } else if (!is_caller) {
+                        // 👉 NEW: Friend hears the caller arrive, and echoes back "I am here too!"
+                        socket.send(JSON.stringify({ 'type': 'peer_ready' }));
+                    }
+                    break;
+                case 'webrtc_offer':
+                    await handleOffer(data.offer);
+                    break;
+                case 'webrtc_answer':
+                    await handleAnswer(data.answer);
+                    break;
+                case 'webrtc_ice_candidate':
+                    await handleIceCandidate(data.candidate);
+                    break;
+                case 'call_end':
+                    window.location.href = '/';
+                    break;
+            }
+        };
+
+        const initiateCall = async () => {
+            peerConnection = new RTCPeerConnection(servers);
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+            peerConnection.onicecandidate = event => {
+                if (event.candidate) {
+                    socket.send(JSON.stringify({ 'type': 'webrtc_ice_candidate', 'candidate': event.candidate }));
+                }
+            };
+
+            peerConnection.ontrack = event => {
+                remoteVideo.srcObject = event.streams[0];
+            };
+
+            const offer = await peerConnection.createOffer();
+            await peerConnection.setLocalDescription(offer);
+            socket.send(JSON.stringify({ 'type': 'webrtc_offer', 'offer': offer }));
+        };
+
+        const handleOffer = async (offer) => {
+            peerConnection = new RTCPeerConnection(servers);
+            localStream.getTracks().forEach(track => peerConnection.addTrack(track, localStream));
+
+            peerConnection.onicecandidate = event => {
+                if (event.candidate) {
+                    socket.send(JSON.stringify({ 'type': 'webrtc_ice_candidate', 'candidate': event.candidate }));
+                }
+            };
+
+            peerConnection.ontrack = event => {
+                remoteVideo.srcObject = event.streams[0];
+            };
+
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+            const answer = await peerConnection.createAnswer();
+            await peerConnection.setLocalDescription(answer);
+            socket.send(JSON.stringify({ 'type': 'webrtc_answer', 'answer': answer }));
+        };
+
+        const handleAnswer = async (answer) => {
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+        };
+
+        const handleIceCandidate = async (candidate) => {
+            try { await peerConnection.addIceCandidate(candidate); } catch(e) {}
+        };
+
+        const hangupBtn = document.getElementById('hangup-btn');
+        if (hangupBtn) {
+            hangupBtn.addEventListener('click', () => {
+                socket.send(JSON.stringify({ 'type': 'call_end' }));
+                window.location.href = '/';
+            });
+        }
     </script>
 </body>
 </html>
