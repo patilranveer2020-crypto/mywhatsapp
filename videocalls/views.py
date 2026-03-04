@@ -7,8 +7,8 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 import json
 import uuid
+from chat.utils import send_push_notification
 
-import json
 
 @login_required
 def video_room(request, room_id):
@@ -49,6 +49,22 @@ def initiate_video_call(request):
                 caller=request.user,
                 callee=to_user,
                 room_id=room_id,
+            )
+            
+            # 👉 NEW: Ring the friend's phone using Push Notifications!
+            room_url = f"/videocalls/{room_id}/?caller=0"
+            extra_instructions = {
+                "type": "video_call",
+                "caller_name": request.user.username,
+                "room_url": room_url
+            }
+            
+            # Send the push notification to the callee
+            send_push_notification(
+                user=to_user, 
+                title="Incoming Video Call 🎥",
+                message=f"{request.user.username} is calling you...",
+                extra_data=extra_instructions
             )
             
             return JsonResponse({

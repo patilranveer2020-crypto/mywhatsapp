@@ -1,9 +1,9 @@
 import json
 from pywebpush import webpush, WebPushException
 from django.conf import settings
-from .models import PushSubscription
+from .models import PushSubscription # Adjust import if needed
 
-def send_push_notification(user, title, message):
+def send_push_notification(user, title, message, extra_data=None):
     try:
         # Find the device token for the user receiving the message
         subscription = PushSubscription.objects.get(user=user)
@@ -13,6 +13,10 @@ def send_push_notification(user, title, message):
             "title": title,
             "body": message
         }
+        
+        # 👉 NEW: If we pass extra instructions (like video call info), attach them!
+        if extra_data:
+            push_data.update(extra_data)
         
         # Format the token exactly how Google/Apple expects it
         sub_info = {
