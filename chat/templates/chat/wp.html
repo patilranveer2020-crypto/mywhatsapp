@@ -194,14 +194,14 @@
                   {% for message in messages %}
                   {% ifchanged message.timestamp.date %}
                     <div class="date-separator">
-                         <span>{{ message.timestamp|localtime|naturalday|capfirst }}</span>
+                      <span>{{ message.timestamp|timezone:"Asia/Kolkata"|naturalday|capfirst }}</span>
                     </div>
                   {% endifchanged %}
         
              <div class="message {% if message.sender == user %}sent{% else %}received{% endif %}">
                 <p>
                     {{ message.content }}
-                    <span>{{ message.timestamp|localtime|date:"H:i" }}</span>
+                    <span>{{ message.timestamp|timezone:"Asia/Kolkata"|date:"H:i" }}</span>
                 </p>
             </div>
           {% endfor %}
