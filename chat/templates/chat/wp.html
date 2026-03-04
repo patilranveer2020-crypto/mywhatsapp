@@ -1,5 +1,6 @@
 {% load static %}
 {% load humanize %}
+{% load tz %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -189,22 +190,22 @@
         </div>
     </div>
 
-                <div class="conversation-area" id="chat-window">
-                    {% for message in messages %}
-                        {% ifchanged message.timestamp.date %}
-                            <div class="date-separator">
-                                <span>{{ message.timestamp|naturalday|capfirst }}</span>
-                            </div>
-                        {% endifchanged %}
-                        
-                        <div class="message {% if message.sender == user %}sent{% else %}received{% endif %}">
-                            <p>
-                                {{ message.content }}
-                                <span>{{ message.timestamp|date:"H:i" }}</span>
-                            </p>
-                        </div>
-                    {% endfor %}
-                </div>
+        <div class="conversation-area" id="chat-window">
+                  {% for message in messages %}
+                  {% ifchanged message.timestamp.date %}
+                    <div class="date-separator">
+                         <span>{{ message.timestamp|localtime|naturalday|capfirst }}</span>
+                    </div>
+                  {% endifchanged %}
+        
+             <div class="message {% if message.sender == user %}sent{% else %}received{% endif %}">
+                <p>
+                    {{ message.content }}
+                    <span>{{ message.timestamp|localtime|date:"H:i" }}</span>
+                </p>
+            </div>
+          {% endfor %}
+        </div>
 
                 <footer class="chat-input-area">
                     <i class="fa-regular fa-face-smile" id="emoji-btn"></i>
