@@ -153,7 +153,7 @@
                                 <span class="contact-name">{{ user.username }}</span>
                                 <span class="chat-time">
                                     {% if user.last_time %}
-                                        {{ user.last_time|date:"H:i" }}
+                                        {{ user.last_time|timezone:"Asia/Kolkata"|date:"H:i" }}
                                     {% endif %}
                                 </span>
                             </div>

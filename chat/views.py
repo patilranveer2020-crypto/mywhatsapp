@@ -116,12 +116,13 @@ def get_messages(request, user_id):
     
     results = []
     for msg in messages:
+        local_timestamp = timezone.localtime(msg.timestamp)
         results.append({
             'id': msg.id,
             'content': msg.content,
             'sender_id': msg.sender.id,
-            'timestamp': msg.timestamp.strftime("%I:%M %p"),
-            'date': msg.timestamp.strftime("%Y-%m-%d"),
+            'timestamp': local_timestamp.strftime("%I:%M %p"),
+            'date': local_timestamp.strftime("%Y-%m-%d"),
             # --- SEND THE STATUS ---
             'is_read': msg.is_read 
         })
@@ -224,7 +225,7 @@ def get_group_messages(request, group_id):
                 'sender_id': msg.sender.id,
                 'sender_name': msg.sender.username,
                 'content': msg.content,
-                'timestamp': msg.timestamp.strftime('%H:%M')
+                'timestamp': timezone.localtime(msg.timestamp).strftime('%H:%M')
             })
             
         return JsonResponse({'status': 'success', 'messages': msg_list})
@@ -277,7 +278,7 @@ def get_statuses(request):
             'id': status.id,
             'image_url': status.image.url if status.image else '',
             'caption': status.caption,
-            'time': status.created_at.strftime('%H:%M')
+            'time': timezone.localtime(status.created_at).strftime('%H:%M')
         })
         
     # Convert our grouped dictionary into a list and send it to the browser
