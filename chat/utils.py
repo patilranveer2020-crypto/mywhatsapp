@@ -46,5 +46,12 @@ def send_push_notification(user, title, message, extra_data=None):
         # THE ALARM: This tells us if the phone never registered!
         print(f"🚨 ERROR: Could not find {user.username}'s phone in the database. They need to 'Allow Notifications' on their device!")
         
+    except WebPushException as ex:
+        if ex.response and ex.response.status_code == 403:
+            print(f"🚨 DELETING STALE PUSH: Subscription for {user.username} is invalid.")
+            subscription.delete()
+        else:
+            print(f"🚨 CRITICAL PUSH ERROR: {repr(ex)}")
+            
     except Exception as ex:
         print(f"🚨 CRITICAL ERROR: The push failed. Reason: {repr(ex)}")
