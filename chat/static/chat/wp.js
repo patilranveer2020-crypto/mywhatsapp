@@ -863,7 +863,7 @@ window.subscribeToPush = function() {
         navigator.serviceWorker.ready.then(function(registration) {
             
             // VAPID Public Key for Push Notifications
-            const vapidPublicKey = "BNGWM8Ep1PanfnanfQWPJBFwxKebvhXG2Z-abtMXIjpSxPvivg8ZfC-9HAjA4a1KoSQCt0d-_SX8-QT8_7UgBvA"; 
+            const vapidPublicKey = 'BNzKqc3nOoaTFYmrghrO0rfMV2xnWSFJmtCbwfVYJWRN_EyB5ZgAeecCEyMzy1KPs2NVTw-tzEtgFULQ0MO9giE'; 
             const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
 
             registration.pushManager.subscribe({
