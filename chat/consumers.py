@@ -133,6 +133,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 }))
                 return 
 
+            local_timestamp = timezone.localtime(new_msg.timestamp)
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
@@ -140,8 +141,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'message_id': new_msg.id, 
                     'message': new_msg.content,
                     'sender_id': self.my_id,
-                    'timestamp': new_msg.timestamp.strftime("%I:%M %p"),
-                    'date': new_msg.timestamp.strftime("%Y-%m-%d"),
+                    'timestamp': local_timestamp.strftime("%I:%M %p"),
+                    'date': local_timestamp.strftime("%Y-%m-%d"),
                     'is_read': False
                 }
             )
@@ -232,7 +233,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             profile.is_online = is_online
             profile.last_seen = timezone.now()
             profile.save()
-            return profile.last_seen.strftime("%I:%M %p")
+            return timezone.localtime(profile.last_seen).strftime("%I:%M %p")
         except Profile.DoesNotExist:
             return ""
 
@@ -243,7 +244,8 @@ class ChatConsumer(AsyncWebsocketConsumer):
             if profile.is_online:
                 return True, "online"
             else:
-                return False, f"last seen today at {profile.last_seen.strftime('%I:%M %p')}"
+                last_seen_local = timezone.localtime(profile.last_seen)
+                return False, f"last seen today at {last_seen_local.strftime('%I:%M %p')}"
         except Profile.DoesNotExist:
             return False, ""
 
@@ -314,7 +316,7 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
                     'message': message,
                     'sender_id': user_id,
                     'sender_name': sender_name,
-                    'timestamp': saved_msg.timestamp.strftime('%H:%M')
+                    'timestamp': timezone.localtime(saved_msg.timestamp).strftime('%H:%M')
                 }
             )
             
