@@ -17,7 +17,7 @@ import json
 def service_worker(request):
     """Serve Service Worker from root URL to allow full scope"""
     sw_code = '''
-const CACHE_NAME = 'mywhatsapp-v3';
+const CACHE_NAME = 'mywhatsapp-v4';
 
 self.addEventListener('install', event => {
     self.skipWaiting();
