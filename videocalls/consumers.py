@@ -7,24 +7,31 @@ from django.utils import timezone
 from datetime import timedelta
 
 class VideoCallConsumer(AsyncWebsocketConsumer):
-    async def connect(self):
-        self.user = self.scope["user"]
-        
-        if self.user.is_authenticated:
-            self.room_id = self.scope['url_route']['kwargs'].get('room_id')
-            self.room_group_name = f'video_call_room_{self.room_id}'
-            self.personal_group_name = f'video_call_{self.user.id}'
-            
-            await self.channel_layer.group_add(self.room_group_name, self.channel_name)
-            await self.channel_layer.group_add(self.personal_group_name, self.channel_name)
-            await self.accept()
-        else:
-            await self.close()
+ @database_sync_to_async
+ def update_user_status(self, online_status):
+    user = self.scope['user']
+    if user.is_authenticated:
+        from django.utils import timezone
+        # This reaches into the Profile you just showed me
+        profile = user.profile 
+        profile.is_online = online_status
+        profile.last_seen = timezone.now()
+        profile.save(update_fields=['is_online', 'last_seen'])
 
-    async def disconnect(self, close_code):
-        if hasattr(self, 'room_group_name'):
-            await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
-            await self.channel_layer.group_discard(self.personal_group_name, self.channel_name)
+async def connect(self):
+    self.group_id = self.scope['url_route']['kwargs']['group_id']
+    self.room_group_name = f'chat_group_{self.group_id}'
+    await self.channel_layer.group_add(self.room_group_name, self.channel_name)
+    await self.accept()
+    
+    # 👉 Set user to Online (True)
+    await self.update_user_status(True)
+
+async def disconnect(self, close_code):
+    # 👉 Set user to Offline (False) and save the final last_seen time
+    await self.update_user_status(False)
+    
+    await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
 
     async def receive(self, text_data):
         text_data_json = json.loads(text_data)
