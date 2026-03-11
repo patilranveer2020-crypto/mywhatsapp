@@ -9,7 +9,8 @@ class Message(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
     image = models.ImageField(upload_to='chat_images/', blank=True, null=True)
-    video = models.FileField(upload_to='videos/', null=True, blank=True)
+   # Change from FileField to URLField
+    video = models.URLField(max_length=500, null=True, blank=True)
 
     def __str__(self):
         return f"From {self.sender} to {self.recipient}"
@@ -46,6 +47,8 @@ class GroupMessage(models.Model):
     # We will use this to track who has seen the message later
     read_by = models.ManyToManyField(User, related_name='read_group_messages', blank=True)
     timestamp = models.DateTimeField(auto_now_add=True)
+    # Change from FileField to URLField
+    video = models.URLField(max_length=500, null=True, blank=True)
 
     def __str__(self):
         return f"{self.sender.username} in {self.group.name}: {self.content[:20]}"
