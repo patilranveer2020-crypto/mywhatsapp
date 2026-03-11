@@ -6,7 +6,7 @@ const urlsToCache = [
   '/static/icon-512.png'
 ];
 
-// Install the Service Worker and save files to the phone's memory
+
 self.addEventListener('install', event => {
   event.waitUntil(
     caches.open(CACHE_NAME)

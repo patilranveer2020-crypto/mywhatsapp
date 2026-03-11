@@ -51,7 +51,8 @@
 
  </div>
 <script>
-        const is_caller = "{{ is_caller|safe }}";
+        // This ensures only the person who initiated the call is the "caller"
+        const is_caller = "{{ is_caller }}" === "True" || "{{ is_caller }}" === "1";
         const room_id = "{{ room_id }}";
         
         let localStream;
@@ -71,12 +72,13 @@
 
         socket.onopen = async () => {
             try {
-                // Turn on the camera automatically
                 localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
                 localVideo.srcObject = localStream;
                 
-                // 👉 NEW: EVERYONE announces when they enter the room
-                socket.send(JSON.stringify({ 'type': 'peer_ready' }));
+                // 👉 FIX: The friend answering the call announces they arrived!
+                if (!is_caller) {
+                    socket.send(JSON.stringify({ 'type': 'peer_ready' }));
+                }
             } catch (error) {
                 console.error("Camera access denied: ", error);
             }
@@ -86,13 +88,10 @@
             const data = JSON.parse(event.data);
             
             switch(data.type) {
-                case 'peer_ready':
-                    if (is_caller && !peerConnection) {
-                        // Caller hears the friend and starts the video stream!
+               case 'peer_ready':
+                    
+                    if (is_caller) {
                         initiateCall();
-                    } else if (!is_caller) {
-                        // 👉 NEW: Friend hears the caller arrive, and echoes back "I am here too!"
-                        socket.send(JSON.stringify({ 'type': 'peer_ready' }));
                     }
                     break;
                 case 'webrtc_offer':
@@ -121,6 +120,7 @@
             };
 
             peerConnection.ontrack = event => {
+                console.log('ontrack event fired:', event);
                 remoteVideo.srcObject = event.streams[0];
             };
 
@@ -140,6 +140,7 @@
             };
 
             peerConnection.ontrack = event => {
+                console.log('ontrack event fired:', event);
                 remoteVideo.srcObject = event.streams[0];
             };
 
@@ -154,7 +155,7 @@
         };
 
         const handleIceCandidate = async (candidate) => {
-            try { await peerConnection.addIceCandidate(candidate); } catch(e) {}
+            try { await peerConnection.addIceCandidate(candidate); } catch(e) { console.error(e); }
         };
 
         const hangupBtn = document.getElementById('hangup-btn');
