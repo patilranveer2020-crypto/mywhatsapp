@@ -53,6 +53,8 @@ urlpatterns = [
 
     # Video Call URLs
     path('videocalls/', include('videocalls.urls')),
+    path('send_message/', views.send_message, name='send_message'),
+
 ]
 
 # Keep your media settings for images

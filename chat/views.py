@@ -12,6 +12,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
 from django.views.decorators.http import require_POST
 import json
+import cloudinary.uploader
 
 
 def service_worker(request):
@@ -344,3 +345,49 @@ def test_push(request):
         return JsonResponse({'status': 'success', 'message': 'Test notification sent!'})
     except Exception as e:
         return JsonResponse({'status': 'error', 'message': str(e)})
+
+
+def send_message(request):
+    if request.method == 'POST':
+        room_id = request.POST.get('room_id')
+        content = request.POST.get('content', '')
+        image_file = request.FILES.get('image')
+        video_file = request.FILES.get('video') # 👉 Catch the video file here
+        
+        room = Room.objects.get(id=room_id)
+        
+        # Create the message object
+        message = Message(
+            sender=request.user,
+            room=room,
+            content=content
+        )
+
+        # Handle Video Upload to Cloudinary
+        if video_file:
+            # We tell Cloudinary specifically that this is a 'video' resource
+            upload_result = cloudinary.uploader.upload(
+                video_file, 
+                resource_type="video",
+                folder="whatsapp_videos/"
+            )
+            # Save the secure URL returned by Cloudinary
+            message.video = upload_result['secure_url']
+
+        # Handle Image Upload (if you have this)
+        if image_file:
+            image_result = cloudinary.uploader.upload(image_file, folder="whatsapp_images/")
+            message.image = image_result['secure_url']
+
+        message.save()
+
+        # Return the data so JavaScript can show it immediately
+        return JsonResponse({
+            'status': 'success',
+            'message_content': message.content,
+            'video_url': message.video.url if message.video else None,
+            'image_url': message.image.url if message.image else None,
+            'sender': message.sender.username,
+        })
+
+    return JsonResponse({'status': 'error'}, status=400)

@@ -112,8 +112,37 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 )
                 return
 
-            message_content = text_data_json['message']
+            # 👉 NEW: Video Bypass Logic for Private Chats
+            video_url = text_data_json.get('video_url')
+            message_content = text_data_json.get('message', '')
 
+            if video_url:
+                sender_name = self.scope['user'].username
+                try:
+                    await self.trigger_private_push(self.other_user_id, f"New video from {sender_name}", "🎥 Video message")
+                except Exception as e:
+                    print(f"Push error: {e}")
+
+                from django.utils import timezone
+                local_time = timezone.localtime()
+
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'chat_message',
+                        'message_id': text_data_json.get('message_id', 0), 
+                        'message': message_content,
+                        'video_url': video_url, # Pass the URL to the group!
+                        'sender_id': self.my_id,
+                        'sender_name': sender_name,
+                        'timestamp': local_time.strftime("%I:%M %p"),
+                        'date': local_time.strftime("%Y-%m-%d"),
+                        'is_read': False
+                    }
+                )
+                return
+
+            # --- NORMAL TEXT MESSAGE LOGIC ---
             try:
                 # 1. Save the message to the database
                 new_msg = await self.save_message(message_content, self.my_id, self.other_user_id)
@@ -141,6 +170,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                     'message_id': new_msg.id, 
                     'message': new_msg.content,
                     'sender_id': self.my_id,
+                    'sender_name': self.scope['user'].username,
                     'timestamp': local_timestamp.strftime("%I:%M %p"),
                     'date': local_timestamp.strftime("%Y-%m-%d"),
                     'is_read': False
@@ -158,15 +188,18 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'room_id': event['room_id']
         }))
 
-
     async def chat_message(self, event):
+        # Send the message down to the browser
         await self.send(text_data=json.dumps({
-            'message_id': event['message_id'], 
-            'message': event['message'],
-            'sender_id': event['sender_id'],
-            'timestamp': event['timestamp'],
-            'date': event['date'],
-            'is_read': event['is_read']
+            'type': 'chat_message',
+            'message_id': event.get('message_id'),
+            'message': event.get('message'),
+            'video_url': event.get('video_url'), # 👉 NEW: Pass it to frontend
+            'sender_id': event.get('sender_id'),
+            'sender_name': event.get('sender_name'),
+            'timestamp': event.get('timestamp'),
+            'date': event.get('date'),
+            'is_read': event.get('is_read')
         }))
 
     async def message_deleted(self, event):
@@ -255,7 +288,6 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
         user = self.scope['user']
         if user.is_authenticated:
             try:
-                # 👉 FIX: Update the Profile, not the Base User!
                 profile = Profile.objects.get(user=user)
                 profile.last_seen = timezone.now()
                 profile.save(update_fields=['last_seen'])
@@ -300,13 +332,31 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
             )
             return 
 
-        if 'message' in text_data_json:
-            message = text_data_json['message']
-            
-            # 1. Save group message
-            saved_msg = await self.save_group_message(user_id, self.group_id, message)
+        # 👉 NEW: Video Bypass Logic for Group Chats
+        video_url = text_data_json.get('video_url')
+        message = text_data_json.get('message', '')
 
-            # 2. TRIGGER GROUP PUSH NOTIFICATION
+        if video_url or message:
+            
+            if video_url:
+                # Video Bypass! Skip database saving
+                await self.trigger_group_push(self.group_id, user_id, sender_name, "🎥 Video message")
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'chat_message',
+                        'message_id': text_data_json.get('message_id', 0),
+                        'message': message,
+                        'video_url': video_url, # Pass URL to group
+                        'sender_id': user_id,
+                        'sender_name': sender_name,
+                        'timestamp': timezone.localtime().strftime('%H:%M')
+                    }
+                )
+                return
+
+            # Normal Text Message Logic
+            saved_msg = await self.save_group_message(user_id, self.group_id, message)
             await self.trigger_group_push(self.group_id, user_id, sender_name, message)
 
             await self.channel_layer.group_send(
@@ -315,6 +365,7 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
                     'type': 'chat_message',
                     'message_id': saved_msg.id, 
                     'message': message,
+                    'video_url': None,
                     'sender_id': user_id,
                     'sender_name': sender_name,
                     'timestamp': timezone.localtime(saved_msg.timestamp).strftime('%H:%M')
@@ -329,11 +380,13 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
 
     async def chat_message(self, event):
         await self.send(text_data=json.dumps({
-            'message_id': event['message_id'], 
-            'message': event['message'],
-            'sender_id': event['sender_id'],
-            'sender_name': event['sender_name'],
-            'timestamp': event['timestamp']
+            'type': 'chat_message',
+            'message_id': event.get('message_id'), 
+            'message': event.get('message'),
+            'video_url': event.get('video_url'), # 👉 NEW: Pass it to frontend
+            'sender_id': event.get('sender_id'),
+            'sender_name': event.get('sender_name'),
+            'timestamp': event.get('timestamp')
         }))
 
     async def message_deleted(self, event):
@@ -366,7 +419,6 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
         except GroupMessage.DoesNotExist:
             pass
 
-# 👉 NEW: The missing Video Call Consumer!
 class VideoCallConsumer(AsyncWebsocketConsumer):
     async def connect(self):
         self.room_id = self.scope['url_route']['kwargs']['room_id']
@@ -385,17 +437,15 @@ class VideoCallConsumer(AsyncWebsocketConsumer):
         )
 
     async def receive(self, text_data):
-        # Send message to room group, BUT attach the sender's unique channel name
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 'type': 'forward_message',
                 'message': text_data,
-                'sender_channel_name': self.channel_name  # 👉 FIX: Tag who sent this
+                'sender_channel_name': self.channel_name
             }
         )
 
     async def forward_message(self, event):
-        # 👉 FIX: Only send the data if you are NOT the person who originally sent it!
         if self.channel_name != event['sender_channel_name']:
             await self.send(text_data=event['message'])
