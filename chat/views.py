@@ -349,45 +349,59 @@ def test_push(request):
 
 def send_message(request):
     if request.method == 'POST':
-        room_id = request.POST.get('room_id')
+        # Get the data from the JavaScript FormData
+        chat_type = request.POST.get('chat_type') # 'user' or 'group'
+        target_id = request.POST.get('room_id') 
         content = request.POST.get('content', '')
-        image_file = request.FILES.get('image')
-        video_file = request.FILES.get('video') # 👉 Catch the video file here
+        video_file = request.FILES.get('video')
         
-        room = Room.objects.get(id=room_id)
+        video_url = None
         
-        # Create the message object
-        message = Message(
-            sender=request.user,
-            room=room,
-            content=content
-        )
-
-        # Handle Video Upload to Cloudinary
+        # 1. Upload to Cloudinary
         if video_file:
-            # We tell Cloudinary specifically that this is a 'video' resource
-            upload_result = cloudinary.uploader.upload(
-                video_file, 
-                resource_type="video",
-                folder="whatsapp_videos/"
-            )
-            # Save the secure URL returned by Cloudinary
-            message.video = upload_result['secure_url']
+            try:
+                upload_result = cloudinary.uploader.upload(
+                    video_file, 
+                    resource_type="video",
+                    folder="whatsapp_videos/"
+                )
+                video_url = upload_result['secure_url']
+            except Exception as e:
+                return JsonResponse({'status': 'error', 'error': f'Cloudinary Error: {str(e)}'})
 
-        # Handle Image Upload (if you have this)
-        if image_file:
-            image_result = cloudinary.uploader.upload(image_file, folder="whatsapp_images/")
-            message.image = image_result['secure_url']
+        # 2. Save to the correct Database table
+        try:
+            if chat_type == 'user':
+                recipient = User.objects.get(id=target_id)
+                msg = Message.objects.create(
+                    sender=request.user,
+                    recipient=recipient,
+                    content=content
+                )
+                if video_url:
+                    msg.video = video_url
+                    msg.save()
+                    
+            elif chat_type == 'group':
+                group = ChatGroup.objects.get(id=target_id)
+                msg = GroupMessage.objects.create(
+                    sender=request.user,
+                    group=group,
+                    content=content
+                )
+                if video_url and hasattr(msg, 'video'):
+                    msg.video = video_url
+                    msg.save()
+                    
+        except Exception as db_error:
+            print(f"DB Error in send_message: {db_error}") # Prints to your Render logs!
+            return JsonResponse({'status': 'error', 'error': 'Database error'})
 
-        message.save()
-
-        # Return the data so JavaScript can show it immediately
+        # 3. Return success to JavaScript!
         return JsonResponse({
             'status': 'success',
-            'message_content': message.content,
-            'video_url': message.video.url if message.video else None,
-            'image_url': message.image.url if message.image else None,
-            'sender': message.sender.username,
+            'message_content': content,
+            'video_url': video_url,
         })
 
-    return JsonResponse({'status': 'error'}, status=400)
+    return JsonResponse({'status': 'error', 'error': 'Invalid request method'})
