@@ -380,15 +380,17 @@ class VideoCallConsumer(AsyncWebsocketConsumer):
         )
 
     async def receive(self, text_data):
-        # This instantly bounces the video data & hangup commands to the other person
+        # Send message to room group, BUT attach the sender's unique channel name
         await self.channel_layer.group_send(
             self.room_group_name,
             {
                 'type': 'forward_message',
-                'message': text_data
+                'message': text_data,
+                'sender_channel_name': self.channel_name  # 👉 FIX: Tag who sent this
             }
         )
 
     async def forward_message(self, event):
-        # Pushes the data down to the browser
-        await self.send(text_data=event['message'])
+        # 👉 FIX: Only send the data if you are NOT the person who originally sent it!
+        if self.channel_name != event['sender_channel_name']:
+            await self.send(text_data=event['message'])
