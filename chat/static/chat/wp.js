@@ -491,7 +491,7 @@ window.uploadVideoMessage = async function(file) {
     chatLog.scrollTop = chatLog.scrollHeight;
 
     try {
-        const response = await fetch('/chat/send_message/', {
+        const response = await fetch('/send_message/', {
             method: 'POST',
             body: formData,
             headers: {
