@@ -254,8 +254,13 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
     def update_user_last_seen(self):
         user = self.scope['user']
         if user.is_authenticated:
-            user.last_seen = timezone.now()
-            user.save(update_fields=['last_seen'])
+            try:
+                # 👉 FIX: Update the Profile, not the Base User!
+                profile = Profile.objects.get(user=user)
+                profile.last_seen = timezone.now()
+                profile.save(update_fields=['last_seen'])
+            except Profile.DoesNotExist:
+                pass
 
     async def connect(self):
         self.group_id = self.scope['url_route']['kwargs']['group_id']

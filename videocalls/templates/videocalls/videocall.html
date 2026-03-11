@@ -52,7 +52,7 @@
 
 <script>
     const is_caller = "{{ is_caller }}" === "True" || "{{ is_caller }}" === "1";
-    const room_id = "{{ room_id }}";
+    const room_id = window.location.pathname.split('/').filter(Boolean).pop();
     
     let localStream;
     let peerConnection;
