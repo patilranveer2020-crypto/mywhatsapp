@@ -176,6 +176,14 @@ CLOUDINARY_STORAGE = {
     'secure': True
 }
 
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': 'danpxoafq',
+    'API_KEY': '225756872153864',
+    'API_SECRET': 'Zh8eu8DJ87NiiivnF-NLsbJp05M',
+   
+ 
+}
+
 # This tells Django: "For all media files, send them to Cloudinary!"
 # DEFAULT_FILE_STORAGE is deprecated in Django 6.0, using STORAGES instead
 
