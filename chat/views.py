@@ -363,7 +363,7 @@ def send_message(request):
                 upload_result = cloudinary.uploader.upload(
                     video_file, 
                     resource_type="video",
-                    folder="whatsapp_videos/"
+                    folder="whatsapp_videos/",
                     cloud_name="danpxoafq",
                     api_key="225756872153864",
                     api_secret="Zh8eu8DJ87NiiivnF-NLsbJp05M",
