@@ -51,7 +51,8 @@
  </div>
 
 <script>
-    const is_caller = "{{ is_caller }}" === "True" || "{{ is_caller }}" === "1";
+    const urlParams = new URLSearchParams(window.location.search);
+    const is_caller = urlParams.get('caller') === '1';
     const room_id = window.location.pathname.split('/').filter(Boolean).pop();
     
     let localStream;
