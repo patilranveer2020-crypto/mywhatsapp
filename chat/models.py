@@ -45,6 +45,7 @@ class GroupMessage(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
     # We will use this to track who has seen the message later
     read_by = models.ManyToManyField(User, related_name='read_group_messages', blank=True)
+    timestamp = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.sender.username} in {self.group.name}: {self.content[:20]}"

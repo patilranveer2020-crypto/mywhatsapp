@@ -377,26 +377,23 @@ def send_message(request):
         try:
             if chat_type == 'user':
                 recipient = User.objects.get(id=target_id)
+                # We save everything in ONE go here
                 msg = Message.objects.create(
                     sender=request.user,
                     recipient=recipient,
-                    content=content
+                    content=content,      # <--- Added the missing comma here!
+                    video=video_url       # <--- Added the video link here
                 )
-                if video_url:
-                    msg.video = video_url
-                    msg.save()
                     
             elif chat_type == 'group':
                 group = ChatGroup.objects.get(id=target_id)
                 msg = GroupMessage.objects.create(
                     sender=request.user,
                     group=group,
-                    content=content
+                    content=content,      # <--- Added the missing comma here!
+                    video=video_url if hasattr(GroupMessage, 'video') else None
                 )
-                if video_url and hasattr(msg, 'video'):
-                    msg.video = video_url
-                    msg.save()
-                    
+
         except Exception as db_error:
             print(f"DB Error in send_message: {db_error}") # Prints to your Render logs!
             return JsonResponse({'status': 'error', 'error': 'Database error'})
