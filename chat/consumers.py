@@ -118,7 +118,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 # 1. Save the message to the database
                 new_msg = await self.save_message(message_content, self.my_id, self.other_user_id)
                 
-                # 👉 2. NEW: TRIGGER THE PUSH NOTIFICATION!
+                # 2. TRIGGER THE PUSH NOTIFICATION!
                 sender_name = self.scope['user'].username
                 await self.trigger_private_push(self.other_user_id, f"New message from {sender_name}", message_content)
                 
@@ -196,7 +196,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
         msg = Message.objects.create(sender=sender, recipient=recipient, content=message)
         return msg 
 
-    # 👉 NEW: ASYNC WRAPPER FOR PUSH NOTIFICATIONS
     @database_sync_to_async
     def trigger_private_push(self, target_user_id, title, message):
         try:
@@ -251,15 +250,14 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
 
 class GroupChatConsumer(AsyncWebsocketConsumer):
-   @database_sync_to_async
-   def update_user_last_seen(self):
+    @database_sync_to_async
+    def update_user_last_seen(self):
         user = self.scope['user']
         if user.is_authenticated:
-            # This updates the last_seen field in your database
             user.last_seen = timezone.now()
             user.save(update_fields=['last_seen'])
 
-   async def connect(self):
+    async def connect(self):
         self.group_id = self.scope['url_route']['kwargs']['group_id']
         self.room_group_name = f'chat_group_{self.group_id}'
 
@@ -269,11 +267,9 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
         )
         await self.accept()
         
-        # 👉 Update last seen as soon as they connect
         await self.update_user_last_seen()
 
-   async def disconnect(self, close_code):
-        # 👉 Update last seen right before they leave
+    async def disconnect(self, close_code):
         await self.update_user_last_seen()
 
         await self.channel_layer.group_discard(
@@ -281,7 +277,7 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
             self.channel_name
         )
 
-   async def receive(self, text_data):
+    async def receive(self, text_data):
         text_data_json = json.loads(text_data)
         user_id = self.scope['user'].id
         sender_name = self.scope['user'].username
@@ -305,7 +301,7 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
             # 1. Save group message
             saved_msg = await self.save_group_message(user_id, self.group_id, message)
 
-            # 👉 2. NEW: TRIGGER GROUP PUSH NOTIFICATION
+            # 2. TRIGGER GROUP PUSH NOTIFICATION
             await self.trigger_group_push(self.group_id, user_id, sender_name, message)
 
             await self.channel_layer.group_send(
@@ -326,7 +322,7 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
         elif text_data_json.get('mark_read'):
             pass 
 
-   async def chat_message(self, event):
+    async def chat_message(self, event):
         await self.send(text_data=json.dumps({
             'message_id': event['message_id'], 
             'message': event['message'],
@@ -335,34 +331,64 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
             'timestamp': event['timestamp']
         }))
 
-   async def message_deleted(self, event):
+    async def message_deleted(self, event):
         await self.send(text_data=json.dumps({
             'type': 'message_deleted',
             'message_id': event['message_id']
         }))
 
-   @database_sync_to_async
-   def save_group_message(self, user_id, group_id, message):
+    @database_sync_to_async
+    def save_group_message(self, user_id, group_id, message):
         user = User.objects.get(id=user_id)
         group = ChatGroup.objects.get(id=group_id)
         return GroupMessage.objects.create(sender=user, group=group, content=message)
 
-    # 👉 NEW: ASYNC WRAPPER FOR GROUP PUSH NOTIFICATIONS
-   @database_sync_to_async
-   def trigger_group_push(self, group_id, sender_id, sender_name, message):
+    @database_sync_to_async
+    def trigger_group_push(self, group_id, sender_id, sender_name, message):
         try:
             group = ChatGroup.objects.get(id=group_id)
-            # Find everyone in the group except the person who sent the message
             for member in group.members.exclude(id=sender_id):
                 send_push_notification(member, f"Group: {group.name}", f"{sender_name}: {message}")
         except Exception as e:
             print(f"Group Push Notification Failed: {e}")
 
-   @database_sync_to_async
-   def mark_group_message_deleted_in_db(self, msg_id, user_id):
+    @database_sync_to_async
+    def mark_group_message_deleted_in_db(self, msg_id, user_id):
         try:
             msg = GroupMessage.objects.get(id=msg_id, sender_id=user_id)
             msg.content = "This message was deleted"
             msg.save()
         except GroupMessage.DoesNotExist:
             pass
+
+# 👉 NEW: The missing Video Call Consumer!
+class VideoCallConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        self.room_id = self.scope['url_route']['kwargs']['room_id']
+        self.room_group_name = f'video_call_{self.room_id}'
+
+        await self.channel_layer.group_add(
+            self.room_group_name,
+            self.channel_name
+        )
+        await self.accept()
+
+    async def disconnect(self, close_code):
+        await self.channel_layer.group_discard(
+            self.room_group_name,
+            self.channel_name
+        )
+
+    async def receive(self, text_data):
+        # This instantly bounces the video data & hangup commands to the other person
+        await self.channel_layer.group_send(
+            self.room_group_name,
+            {
+                'type': 'forward_message',
+                'message': text_data
+            }
+        )
+
+    async def forward_message(self, event):
+        # Pushes the data down to the browser
+        await self.send(text_data=event['message'])
