@@ -364,9 +364,13 @@ def send_message(request):
                     video_file, 
                     resource_type="video",
                     folder="whatsapp_videos/"
+                    cloud_name="danpxoafq",
+                    api_key="225756872153864",
+                    api_secret="Zh8eu8DJ87NiiivnF-NLsbJp05M",
                 )
                 video_url = upload_result['secure_url']
             except Exception as e:
+                print(f"Cloudinary Error: {str(e)}")
                 return JsonResponse({'status': 'error', 'error': f'Cloudinary Error: {str(e)}'})
 
         # 2. Save to the correct Database table
