@@ -417,11 +417,11 @@ function appendMessage(text, type, time = null, date = null, isRead = false, msg
             ${text ? `<div style="margin-top: 5px;">${text}</div>` : ''}
         `;
     } 
-    // 3. THIRD check: If no video, is it an image?
+    
     else if (text && (text.startsWith('/media/') || text.startsWith('http') || text.match(/\.(jpeg|jpg|gif|png)$/) != null)) {
         contentHtml = `<img src="${text}" style="max-width: 100%; height: auto; display: block; border-radius: 8px; cursor: pointer; margin-bottom: 5px;" onclick="window.open(this.src)">`;
     } 
-    // 4. FINAL check: Otherwise, it's just normal text
+   
     else {
         contentHtml = text || ''; 
     }
@@ -459,9 +459,7 @@ function appendMessage(text, type, time = null, date = null, isRead = false, msg
     chatBody.scrollTop = chatBody.scrollHeight;
 }
 
-// ==========================================
-// 4. UTILITIES & INITIALIZATION
-// ==========================================
+
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
