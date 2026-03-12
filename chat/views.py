@@ -125,7 +125,8 @@ def get_messages(request, user_id):
             'timestamp': local_timestamp.strftime("%I:%M %p"),
             'date': local_timestamp.strftime("%Y-%m-%d"),
             # --- SEND THE STATUS ---
-            'is_read': msg.is_read 
+            'is_read': msg.is_read ,
+            'video_url': msg.video if msg.video else None,
         })
     
     return JsonResponse(results, safe=False)

@@ -119,7 +119,7 @@ window.startGroupChat = function(groupId, groupName) {
                     const isMe = String(msg.sender_id) === String(currentUserId);
                     let msgContent = msg.content;
                     
-                    // 👉 NEW: Inject video HTML if history has a video
+                    // 👉 Inject video HTML if history has a video
                     let mediaHtml = msg.video_url ? `<video width="100%" style="max-width:250px; border-radius: 8px; margin-bottom: 5px;" controls><source src="${msg.video_url}" type="video/mp4"></video><br>` : '';
 
                     if (msgContent === "This message was deleted") {
@@ -175,7 +175,7 @@ window.startGroupChat = function(groupId, groupName) {
         
         let msgContent = data.message || '';
         
-        // 👉 NEW: Handle live incoming videos for group chat
+        // 👉 Handle live incoming videos for group chat
         let mediaHtml = data.video_url ? `<video width="100%" style="max-width:250px; border-radius: 8px; margin-bottom: 5px;" controls><source src="${data.video_url}" type="video/mp4"></video><br>` : '';
 
         if (!isMe) {
@@ -402,7 +402,7 @@ function appendMessage(text, type, time = null, date = null, isRead = false, msg
 
     let contentHtml = '';
     
-    // 👉 NEW: Handle video generation seamlessly
+    // 👉 Handle video generation seamlessly
     if (videoUrl) {
         contentHtml = `
             <video width="100%" style="max-width: 250px; border-radius: 8px; margin-bottom: 5px;" controls>
@@ -470,7 +470,7 @@ function getCookie(name) {
     return cookieValue;
 }
 
-// 👉 NEW: Global Video Uploader Logic
+// 👉 UPDATED: Global Video Uploader Logic fixed to display video immediately
 window.uploadVideoMessage = async function(file) {
     const formData = new FormData();
     formData.append('video', file);
@@ -479,7 +479,7 @@ window.uploadVideoMessage = async function(file) {
     const activeType = localStorage.getItem('activeChatType');
     const activeId = localStorage.getItem('activeChatId');
     formData.append('room_id', activeId); 
-    formData.append('chat_type', activeType); // Pass this to views.py if needed!
+    formData.append('chat_type', activeType); 
     
     formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
 
@@ -500,11 +500,25 @@ window.uploadVideoMessage = async function(file) {
         });
         const data = await response.json();
         
-        // Remove temporary message (the websocket will draw the real one)
+        // Remove temporary message
         const tempMsg = document.getElementById(tempId);
         if (tempMsg) tempMsg.remove();
         
-        if (data.status !== 'success') {
+        if (data.status === 'success') {
+            // 1. Draw the video on your screen immediately!
+            const today = new Date().toISOString().split('T')[0];
+            const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            appendMessage(data.message_content || '', 'sent', timeString, today, false, data.message_id || null, data.video_url);
+
+            // 2. Tell the WebSocket to show it to your friend!
+            if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                chatSocket.send(JSON.stringify({ 
+                    'message': data.message_content || '',
+                    'video_url': data.video_url,
+                    'is_video': true
+                }));
+            }
+        } else {
             alert("Upload failed: " + (data.error || "Unknown error"));
         }
     } catch (error) {
@@ -543,7 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
         msgInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
     }
 
-    // 👉 NEW: Global event listener for the video input button
+    // 👉 Global event listener for the video input button
     const videoInput = document.getElementById('video-input');
     if (videoInput) {
         videoInput.addEventListener('change', function() {
