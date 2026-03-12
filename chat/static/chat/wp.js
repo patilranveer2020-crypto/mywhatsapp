@@ -384,6 +384,7 @@ window.deleteMessage = function(msgId) {
 };
 
 // 👉 UPDATED: Added videoUrl parameter
+// 👉 CRITICAL FIX: Added videoUrl parameter and fixed deletion logic order
 function appendMessage(text, type, time = null, date = null, isRead = false, msgId = null, videoUrl = null) {
     const chatBody = document.querySelector('.conversation-area');
     
@@ -402,8 +403,12 @@ function appendMessage(text, type, time = null, date = null, isRead = false, msg
 
     let contentHtml = '';
     
-    // 👉 Handle video generation seamlessly
-    if (videoUrl) {
+    // 1. FIRST check: Is the message deleted?
+    if (text === "This message was deleted") {
+        contentHtml = `<i class="fa-solid fa-ban" style="color:#888; margin-right:5px;"></i> <i style="color:#888;">This message was deleted</i>`;
+    } 
+    // 2. SECOND check: If not deleted, does it have a video?
+    else if (videoUrl) {
         contentHtml = `
             <video width="100%" style="max-width: 250px; border-radius: 8px; margin-bottom: 5px;" controls>
                 <source src="${videoUrl}" type="video/mp4">
@@ -411,11 +416,13 @@ function appendMessage(text, type, time = null, date = null, isRead = false, msg
             </video>
             ${text ? `<div style="margin-top: 5px;">${text}</div>` : ''}
         `;
-    } else if (text === "This message was deleted") {
-        contentHtml = `<i class="fa-solid fa-ban" style="color:#888; margin-right:5px;"></i> <i style="color:#888;">This message was deleted</i>`;
-    } else if (text && (text.startsWith('/media/') || text.startsWith('http') || text.match(/\.(jpeg|jpg|gif|png)$/) != null)) {
+    } 
+    // 3. THIRD check: If no video, is it an image?
+    else if (text && (text.startsWith('/media/') || text.startsWith('http') || text.match(/\.(jpeg|jpg|gif|png)$/) != null)) {
         contentHtml = `<img src="${text}" style="max-width: 100%; height: auto; display: block; border-radius: 8px; cursor: pointer; margin-bottom: 5px;" onclick="window.open(this.src)">`;
-    } else {
+    } 
+    // 4. FINAL check: Otherwise, it's just normal text
+    else {
         contentHtml = text || ''; 
     }
 
