@@ -1012,18 +1012,34 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
-                // 👉 This is the magic line that asks for the microphone!
-                const localStream = await navigator.mediaDevices.getUserMedia({ 
-                    audio: true, 
-                    video: false 
-                });
                 
-                console.log("Microphone connected successfully!", localStream);
-                alert("Microphone connected! Ready for Phase 2.");
+                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                console.log("Microphone connected successfully!");
+                
+                
+                peerConnection = new RTCPeerConnection(rtcConfig);
+                
+                // 3. Put your microphone audio inside the connection
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
+                });
+
+                // 4. Create the "Offer" (The phone ring invitation)
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+
+                // 5. Send the offer through your existing WebSocket!
+                // (Make sure your WebSocket variable is actually named chatSocket, adjust if needed)
+                chatSocket.send(JSON.stringify({
+                    'type': 'webrtc_offer',
+                    'offer': offer,
+                    'receiver_id': activeUserId // make sure this variable holds the ID of the person you are chatting with
+                }));
+                
+                console.log("Voice call offer sent through WebSocket!");
                 
             } catch (error) {
                 console.error("Microphone error:", error);
-                alert("Could not access the microphone. Please allow microphone permissions in your browser.");
             }
         });
     }

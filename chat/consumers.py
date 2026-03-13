@@ -319,6 +319,19 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
         user_id = self.scope['user'].id
         sender_name = self.scope['user'].username
 
+        # 1. Voice Call Offer Logic
+        if text_data_json.get('type') == 'webrtc_offer':
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'forward_webrtc_offer',
+                    'offer': text_data_json['offer'],
+                    'sender_channel_name': self.channel_name
+                }
+            )
+            return
+
+        # 2. Delete Message Logic
         if text_data_json.get('action') == 'delete_message':
             msg_id = text_data_json.get('message_id')
             await self.mark_group_message_deleted_in_db(msg_id, user_id)
@@ -330,9 +343,9 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
                     'message_id': msg_id
                 }
             )
-            return 
-
-        # 👉 NEW: Video Bypass Logic for Group Chats
+            return
+            
+        # 3. Video Bypass & Normal Text Logic (This is safely back in receive!)
         video_url = text_data_json.get('video_url')
         message = text_data_json.get('message', '')
 
@@ -378,6 +391,20 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
         elif text_data_json.get('mark_read'):
             pass 
 
+
+    # ==========================================
+    # 4. WEBRTC HELPER FUNCTION (Outside of receive!)
+    # ==========================================
+    async def forward_webrtc_offer(self, event):
+        # Only send the phone ring to the OTHER person, not back to the caller
+         if self.channel_name != event['sender_channel_name']:
+            await self.send(text_data=json.dumps({
+                'type': 'webrtc_offer',
+                'offer': event['offer']
+            }))
+
+
+            
     async def chat_message(self, event):
         await self.send(text_data=json.dumps({
             'type': 'chat_message',
