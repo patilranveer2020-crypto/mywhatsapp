@@ -257,6 +257,19 @@ window.startChat = function(userId, username) {
         const data = JSON.parse(e.data);
         const myId = document.getElementById('current-user-id').value;
 
+        if (data.type === 'webrtc_offer') {
+        console.log("📲 INCOMING CALL SIGNAL RECEIVED:", data.offer);
+        
+        // This is our temporary "Ringtone" for testing!
+        if (confirm("Incoming Voice Call! Do you want to answer?")) {
+            console.log("User accepted the call. Ready for Phase 3!");
+            // We will add the code to actually connect the audio here next
+        } else {
+            console.log("User rejected the call.");
+        }
+          return; // Stop here so it doesn't try to print the call as a text message
+      }
+
         if (data.type === 'incoming_video_call') {
             if (String(data.caller_id) !== String(myId)) { 
                 window.playNotificationSound();
