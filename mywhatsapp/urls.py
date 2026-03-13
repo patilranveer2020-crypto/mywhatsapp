@@ -54,6 +54,7 @@ urlpatterns = [
     # Video Call URLs
     path('videocalls/', include('videocalls.urls')),
     path('send_message/', views.send_message, name='send_message'),
+    path('api/whatsapp/webhook/', views.whatsapp_webhook, name='whatsapp_webhook'),
 
 ]
 

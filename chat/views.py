@@ -12,6 +12,8 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
 from django.views.decorators.http import require_POST
 import json
+import requests
+from django.views.decorators.csrf import csrf_exempt
 import cloudinary.uploader
 
 
@@ -407,3 +409,66 @@ def send_message(request):
         })
 
     return JsonResponse({'status': 'error', 'error': 'Invalid request method'})
+
+
+
+
+
+# ==========================================
+# WHATSAPP BRIDGE LOGIC
+# ==========================================
+
+def send_whatsapp_message(phone_number, message_text):
+    ACCESS_TOKEN = 'your_meta_access_token'
+    PHONE_NUMBER_ID = 'your_meta_phone_number_id'
+    
+    url = f"https://graph.facebook.com/v18.0/{PHONE_NUMBER_ID}/messages"
+    
+    headers = {
+        "Authorization": f"Bearer {ACCESS_TOKEN}",
+        "Content-Type": "application/json"
+    }
+    
+    data = {
+        "messaging_product": "whatsapp",
+        "to": phone_number,
+        "type": "text",
+        "text": {
+            "body": message_text
+        }
+    }
+    
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+    
+    if response.status_code == 200:
+        print("Success! Sent to real WhatsApp!")
+    else:
+        print("Failed to send:", response.json())
+
+@csrf_exempt
+def whatsapp_webhook(request):
+    if request.method == 'GET':
+        verify_token = "my_secret_token_123" # We will need this later for Meta!
+        mode = request.GET.get('hub.mode')
+        token = request.GET.get('hub.verify_token')
+        challenge = request.GET.get('hub.challenge')
+
+        if mode and token:
+            if mode == 'subscribe' and token == verify_token:
+                return HttpResponse(challenge, status=200)
+            else:
+                return HttpResponse('Error, invalid token', status=403)
+                
+    elif request.method == 'POST':
+        data = json.loads(request.body)
+        try:
+            message_text = data['entry'][0]['changes'][0]['value']['messages'][0]['text']['body']
+            sender_phone = data['entry'][0]['changes'][0]['value']['contacts'][0]['wa_id']
+            print(f"Received message from {sender_phone}: {message_text}")
+            
+            # Later, we will add the code here to save this to your database!
+            
+        except KeyError:
+            pass 
+            
+        return JsonResponse({"status": "success"}, status=200)
