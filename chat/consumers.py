@@ -421,7 +421,8 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
 
 class VideoCallConsumer(AsyncWebsocketConsumer):
     async def connect(self):
-        self.room_id = self.scope['url_route']['kwargs']['room_id']
+        kwargs = self.scope['url_route']['kwargs']
+        self.room_id = kwargs.get('room_id') or kwargs.get('id') or "waiting_room"
         self.room_group_name = f'video_call_{self.room_id}'
 
         await self.channel_layer.group_add(
