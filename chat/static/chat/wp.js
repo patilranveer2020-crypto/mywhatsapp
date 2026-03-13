@@ -993,3 +993,38 @@ window.subscribeToPush = function() {
         });
     });
 };
+
+
+// ==========================================
+// VOICE CALL LOGIC (WebRTC Phase 1)
+// ==========================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    const callBtn = document.getElementById('start-voice-call');
+    
+    if (callBtn) {
+        callBtn.addEventListener('click', async () => {
+            // Make sure we are actually in a chat with someone
+            const activeId = localStorage.getItem('activeChatId');
+            if (!activeId) {
+                alert("Please select a user to call first!");
+                return;
+            }
+
+            try {
+                // 👉 This is the magic line that asks for the microphone!
+                const localStream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: true, 
+                    video: false 
+                });
+                
+                console.log("Microphone connected successfully!", localStream);
+                alert("Microphone connected! Ready for Phase 2.");
+                
+            } catch (error) {
+                console.error("Microphone error:", error);
+                alert("Could not access the microphone. Please allow microphone permissions in your browser.");
+            }
+        });
+    }
+});

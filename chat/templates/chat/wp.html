@@ -184,6 +184,7 @@
         </div>
         
        <div class="header-icons">
+            <i class="fa-solid fa-phone" id="start-voice-call" style="cursor: pointer; color: #00bfa5; margin-left: 15px; font-size: 20px;" title="Voice Call"></i>
             <i class="fa-solid fa-video" id="video-call-btn" title="Start Video Call" onclick="ringFriend()" style="cursor: pointer;"></i>
             <i class="fa-solid fa-magnifying-glass"></i>
             <i class="fa-solid fa-ellipsis-vertical" id="menu-btn"></i>
@@ -309,5 +310,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@3.1.1/dist/index.min.js"></script>
     <script src="{% static 'chat/wp.js' %}?v=16"></script>
     <script src="{% static 'chat/videocall.js' %}?v=1"></script>
+    <audio id="remote-audio" autoplay></audio>
 </body>
 </html>
