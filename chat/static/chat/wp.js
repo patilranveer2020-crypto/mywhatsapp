@@ -1012,11 +1012,15 @@ window.subscribeToPush = function() {
 // VOICE CALL LOGIC (WebRTC Phase 1)
 // ==========================================
 
+let localStream;
+let peerConnection;
+
 document.addEventListener('DOMContentLoaded', () => {
     const callBtn = document.getElementById('start-voice-call');
     
     if (callBtn) {
         callBtn.addEventListener('click', async () => {
+            
             // Make sure we are actually in a chat with someone
             const activeId = localStorage.getItem('activeChatId');
             if (!activeId) {
@@ -1025,11 +1029,18 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
-                
+                // 1. Ask for the microphone
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                 console.log("Microphone connected successfully!");
                 
+                // 👉 THIS IS THE FIX: We define rtcConfig right here!
+                const rtcConfig = {
+                    'iceServers': [
+                        { 'urls': 'stun:stun.l.google.com:19302' }
+                    ]
+                };
                 
+                // 2. Create the WebRTC connection
                 peerConnection = new RTCPeerConnection(rtcConfig);
                 
                 // 3. Put your microphone audio inside the connection
@@ -1042,11 +1053,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 await peerConnection.setLocalDescription(offer);
 
                 // 5. Send the offer through your existing WebSocket!
-                // (Make sure your WebSocket variable is actually named chatSocket, adjust if needed)
                 chatSocket.send(JSON.stringify({
                     'type': 'webrtc_offer',
                     'offer': offer,
-                    'receiver_id': activeUserId // make sure this variable holds the ID of the person you are chatting with
+                    'receiver_id': activeId
                 }));
                 
                 console.log("Voice call offer sent through WebSocket!");
