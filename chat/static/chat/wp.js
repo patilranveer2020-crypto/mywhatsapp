@@ -156,6 +156,20 @@ window.startGroupChat = function(groupId, groupName) {
     
     chatSocket.onmessage = function(e) {
         const data = JSON.parse(e.data);
+
+        if (data.type === 'webrtc_offer') {
+        console.log("📲 INCOMING CALL SIGNAL RECEIVED:", data.offer);
+        
+        // Trigger the browser popup
+        if (confirm("Incoming Voice Call! Do you want to answer?")) {
+            console.log("User accepted the call. Ready for Phase 3!");
+        } else {
+            console.log("User rejected the call.");
+        }
+        
+        // 👉 IMPORTANT: Stop the code here so it doesn't draw a chat bubble!
+        return; 
+    }
         
         if (data.type === 'message_deleted') {
             const msgElement = document.getElementById(`msg-${data.message_id}`);
