@@ -184,32 +184,32 @@ window.startGroupChat = function(groupId, groupName) {
             return; 
         }
 
+        // 👉 NEW: Perfectly matched to your HTML!
         if (data.type === 'chat_message') {
-            // 1. Find the chat container (make sure this ID matches your HTML!)
-            const chatBox = document.getElementById('chat-messages'); // Sometimes people name it 'chat-box' or 'chat-container'
             
-            // 2. Check if the message is from YOU or the OTHER person
-            // (You will need to make sure you have a variable holding your own user ID)
+            // 1. Get the exact chat window ID from your HTML
+            const chatBox = document.getElementById('chat-window'); 
+            
+            // 2. Get your ID from the hidden input in your HTML
+            const currentUserId = document.getElementById('current-user-id').value;
             const isMe = data.sender_id === parseInt(currentUserId); 
             
-            // 3. Create the new chat bubble HTML
+            // 3. Create the div using your exact CSS classes ('sent' or 'received')
             const messageDiv = document.createElement('div');
-            
-            // 👉 IMPORTANT: Change these class names to match whatever CSS you use for your chat bubbles!
-            messageDiv.className = isMe ? 'message my-message' : 'message their-message'; 
+            messageDiv.className = isMe ? 'message sent' : 'message received'; 
             messageDiv.id = `msg-${data.message_id}`;
             
+            // 4. Match the exact <p> and <span> structure from your Django template
             messageDiv.innerHTML = `
-                <div class="msg-content">${data.message}</div>
-                <span class="msg-meta" style="float: right; margin-left: 10px; font-size: 11px; color: #999; margin-top: 5px;">
-                    ${data.timestamp}
-                </span>
+                <p>
+                    ${data.message}
+                    <span>${data.timestamp}</span>
+                </p>
             `;
             
-            // 4. Slap the new bubble onto the screen
+            // 5. Slap it on the screen and scroll to the bottom!
             if (chatBox) {
                 chatBox.appendChild(messageDiv);
-                // 5. Auto-scroll to the bottom so the user sees the new message
                 chatBox.scrollTop = chatBox.scrollHeight;
             }
         }
