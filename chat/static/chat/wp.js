@@ -343,8 +343,7 @@ window.startChat = function(userId, username) {
             return; 
         }
 
-       // 👉 THE FIX: Catch the message even if Django forgot the 'type' label!
-       // 👉 THE FIX: Catch ANY message, even if Django forgot the 'chat_message' label!
+      
         if (data.type === 'chat_message' || data.type === 'message' || data.message) {
             
             // 1. Figure out if YOU sent it, or if THEY sent it
@@ -383,9 +382,18 @@ window.startChat = function(userId, username) {
 // ==========================================
 function sendMessage() {
     const input = document.getElementById('message-input');
-    const message = input.value; 
+    const message = input.value.trim(); 
+    
     if (message.length > 0 && chatSocket) {
+        
         chatSocket.send(JSON.stringify({ 'message': message }));
+
+        
+        const today = new Date().toISOString().split('T')[0];
+        const timeNow = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        appendMessage(message, 'sent', timeNow, today, false, null, null);
+
+        
         input.value = '';
     }
 }
