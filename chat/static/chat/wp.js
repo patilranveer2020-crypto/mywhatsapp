@@ -369,13 +369,25 @@ window.startChat = function(userId, username) {
     fetch(`/api/messages/${userId}/`)
     .then(res => res.json())
     .then(data => {
+        console.log("📚 HISTORY X-RAY: Look what I got from the database:", data);
+        
         const myId = document.getElementById('current-user-id').value;
-        data.forEach(msg => {
-            const type = (msg.sender_id == myId) ? 'sent' : 'received';
-            appendMessage(msg.content, type, msg.timestamp, msg.date, msg.is_read, msg.id, msg.video_url);
-        });
+        
+        try {
+            data.forEach(msg => {
+                const type = (msg.sender_id == myId) ? 'sent' : 'received';
+                // Try to draw the message
+                appendMessage(msg.content, type, msg.timestamp, msg.date, msg.is_read, msg.id, msg.video_url);
+            });
+            console.log("✅ History successfully drawn on screen!");
+        } catch (error) {
+            console.error("❌ HISTORY CRASH: Failed to draw a message!", error);
+        }
+    })
+    .catch(error => {
+        console.error("❌ FETCH CRASH: Failed to talk to the database!", error);
     });
-};
+}; // <-- Make sure this closing bracket is still here!
 
 // ==========================================
 // 3. SEND, APPEND & DELETE MESSAGE LOGIC
