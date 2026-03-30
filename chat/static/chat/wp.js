@@ -157,6 +157,8 @@ window.startGroupChat = function(groupId, groupName) {
     chatSocket.onmessage = function(e) {
         const data = JSON.parse(e.data);
 
+        console.log("🚨 TRACKER: I just received a message from Django!", data);
+
         if (data.type === 'webrtc_offer') {
         console.log("📲 INCOMING CALL SIGNAL RECEIVED:", data.offer);
         
