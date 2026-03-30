@@ -478,3 +478,20 @@ class VideoCallConsumer(AsyncWebsocketConsumer):
     async def forward_message(self, event):
         if self.channel_name != event['sender_channel_name']:
             await self.send(text_data=event['message'])
+
+
+
+            # ==========================================
+    # THE MAILMAN: Delivers real-time text messages
+    # ==========================================
+    async def chat_message(self, event):
+        # This takes the message from the group and sends it down the WebSocket to the browser
+        await self.send(text_data=json.dumps({
+            'type': 'chat_message',
+            'message_id': event.get('message_id'),
+            'message': event.get('message'),
+            'video_url': event.get('video_url'),
+            'sender_id': event.get('sender_id'),
+            'sender_name': event.get('sender_name'),
+            'timestamp': event.get('timestamp')
+        }))
