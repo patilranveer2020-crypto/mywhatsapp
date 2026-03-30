@@ -119,12 +119,11 @@ window.startGroupChat = function(groupId, groupName) {
                     const isMe = String(msg.sender_id) === String(currentUserId);
                     let msgContent = msg.content;
                     
-                    // 👉 Inject video HTML if history has a video
                     let mediaHtml = msg.video_url ? `<video width="100%" style="max-width:250px; border-radius: 8px; margin-bottom: 5px;" controls><source src="${msg.video_url}" type="video/mp4"></video><br>` : '';
 
                     if (msgContent === "This message was deleted") {
                         msgContent = `<i class="fa-solid fa-ban" style="color:#888; margin-right:5px;"></i> <i style="color:#888;">This message was deleted</i>`;
-                        mediaHtml = ''; // Hide video if deleted
+                        mediaHtml = ''; 
                     } else if (!isMe) {
                         msgContent = mediaHtml + `<strong style="color: #128C7E; font-size: 12px;">${msg.sender_name}</strong><br>` + msgContent;
                     } else {
@@ -154,25 +153,22 @@ window.startGroupChat = function(groupId, groupName) {
     const wsScheme = window.location.protocol === "https:" ? "wss" : "ws";
     chatSocket = new WebSocket(`${wsScheme}://${window.location.host}/ws/group/${groupId}/`);
     
-    chatSocket.onmessage = function(e) {
+    // 👉 THE FIX: addEventListener protects Group Chats!
+    chatSocket.addEventListener('message', function(e) {
         const data = JSON.parse(e.data);
-
-        console.log("🚨 TRACKER: I just received a message from Django!", data);
+        
+        console.log("🚨 TRACKER (Group): Message received from Django!", data);
 
         if (data.type === 'webrtc_offer') {
-        console.log("📲 INCOMING CALL SIGNAL RECEIVED:", data.offer);
-        
-        // Trigger the browser popup
-        if (confirm("Incoming Voice Call! Do you want to answer?")) {
-            console.log("User accepted the call. Ready for Phase 3!");
-        } else {
-            console.log("User rejected the call.");
+            console.log("📲 INCOMING CALL SIGNAL RECEIVED:", data.offer);
+            if (confirm("Incoming Voice Call! Do you want to answer?")) {
+                console.log("User accepted the call. Ready for Phase 3!");
+            } else {
+                console.log("User rejected the call.");
+            }
+            return; 
         }
-        
-        // 👉 IMPORTANT: Stop the code here so it doesn't draw a chat bubble!
-        return; 
-    }
-        
+            
         if (data.type === 'message_deleted') {
             const msgElement = document.getElementById(`msg-${data.message_id}`);
             if (msgElement) {
@@ -186,70 +182,43 @@ window.startGroupChat = function(groupId, groupName) {
             return; 
         }
 
-        // 👉 NEW: Perfectly matched to your HTML!
         if (data.type === 'chat_message') {
-            
-            // 1. Get the exact chat window ID from your HTML
-            const chatBox = document.getElementById('chat-window'); 
-            
-            // 2. Get your ID from the hidden input in your HTML
             const currentUserId = document.getElementById('current-user-id').value;
-            const isMe = data.sender_id === parseInt(currentUserId); 
+            const isMe = String(data.sender_id) === String(currentUserId);
             
-            // 3. Create the div using your exact CSS classes ('sent' or 'received')
-            const messageDiv = document.createElement('div');
-            messageDiv.className = isMe ? 'message sent' : 'message received'; 
-            messageDiv.id = `msg-${data.message_id}`;
+            let msgContent = data.message || '';
+            let mediaHtml = data.video_url ? `<video width="100%" style="max-width:250px; border-radius: 8px; margin-bottom: 5px;" controls><source src="${data.video_url}" type="video/mp4"></video><br>` : '';
+
+            if (!isMe) {
+                let senderNameHtml = data.sender_name ? `<strong style="color: #128C7E; font-size: 12px;">${data.sender_name}</strong><br>` : '';
+                msgContent = mediaHtml + senderNameHtml + msgContent;
+            } else {
+                msgContent = mediaHtml + msgContent;
+            }
+
+            const msgClass = isMe ? 'sent' : 'received';
+            let deleteBtn = isMe ? `<i class="fa-solid fa-trash" onclick="deleteMessage(${data.message_id})" style="margin-left: 10px; cursor: pointer; font-size: 11px; color: #999;"></i>` : '';
+
+            const messageHtml = `
+                <div class="message ${msgClass}" id="msg-${data.message_id}">
+                    <div class="msg-content">
+                        ${msgContent}
+                        <span class="msg-meta" style="float: right; margin-left: 10px; font-size: 11px; color: #999; margin-top: 5px; display: inline-block;">
+                            ${data.timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ${deleteBtn}
+                        </span>
+                    </div>
+                </div>`;
             
-            // 4. Match the exact <p> and <span> structure from your Django template
-            messageDiv.innerHTML = `
-                <p>
-                    ${data.message}
-                    <span>${data.timestamp}</span>
-                </p>
-            `;
-            
-            // 5. Slap it on the screen and scroll to the bottom!
-            if (chatBox) {
-                chatBox.appendChild(messageDiv);
-                chatBox.scrollTop = chatBox.scrollHeight;
+            if (actualChatContainer) {
+                actualChatContainer.innerHTML += messageHtml;
+                actualChatContainer.scrollTop = actualChatContainer.scrollHeight;
+            }
+
+            if (!isMe && typeof window.showBrowserNotification === 'function') {
+                window.showBrowserNotification(data.sender_name, data.message || "Video sent", null);
             }
         }
-
-        const currentUserId = document.getElementById('current-user-id').value;
-        const isMe = String(data.sender_id) === String(currentUserId);
-        
-        let msgContent = data.message || '';
-        
-        // 👉 Handle live incoming videos for group chat
-        let mediaHtml = data.video_url ? `<video width="100%" style="max-width:250px; border-radius: 8px; margin-bottom: 5px;" controls><source src="${data.video_url}" type="video/mp4"></video><br>` : '';
-
-        if (!isMe) {
-            msgContent = mediaHtml + `<strong style="color: #128C7E; font-size: 12px;">${data.sender_name}</strong><br>` + msgContent;
-        } else {
-            msgContent = mediaHtml + msgContent;
-        }
-
-        const msgClass = isMe ? 'sent' : 'received';
-        let deleteBtn = isMe ? `<i class="fa-solid fa-trash" onclick="deleteMessage(${data.message_id})" style="margin-left: 10px; cursor: pointer; font-size: 11px; color: #999;"></i>` : '';
-
-        const messageHtml = `
-            <div class="message ${msgClass}" id="msg-${data.message_id}">
-                <div class="msg-content">
-                    ${msgContent}
-                    <span class="msg-meta" style="float: right; margin-left: 10px; font-size: 11px; color: #999; margin-top: 5px; display: inline-block;">
-                        ${data.timestamp || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ${deleteBtn}
-                    </span>
-                </div>
-            </div>`;
-        
-        actualChatContainer.innerHTML += messageHtml;
-        actualChatContainer.scrollTop = actualChatContainer.scrollHeight;
-
-        if (!isMe) {
-            window.showBrowserNotification(data.sender_name, data.message || "Video sent", null);
-        }
-    };
+    }); 
 };
 
 // ==========================================
@@ -299,22 +268,22 @@ window.startChat = function(userId, username) {
         chatSocket.send(JSON.stringify({ 'mark_read': true }));
     };
 
-    chatSocket.onmessage = function(e) {
+    // 👉 THE FIX: addEventListener protects Private Chats too!
+    chatSocket.addEventListener('message', function(e) {
         const data = JSON.parse(e.data);
         const myId = document.getElementById('current-user-id').value;
 
+        console.log("🚨 TRACKER (Private): Message received from Django!", data);
+
         if (data.type === 'webrtc_offer') {
-        console.log("📲 INCOMING CALL SIGNAL RECEIVED:", data.offer);
-        
-        // This is our temporary "Ringtone" for testing!
-        if (confirm("Incoming Voice Call! Do you want to answer?")) {
-            console.log("User accepted the call. Ready for Phase 3!");
-            // We will add the code to actually connect the audio here next
-        } else {
-            console.log("User rejected the call.");
+            console.log("📲 INCOMING CALL SIGNAL RECEIVED:", data.offer);
+            if (confirm("Incoming Voice Call! Do you want to answer?")) {
+                console.log("User accepted the call. Ready for Phase 3!");
+            } else {
+                console.log("User rejected the call.");
+            }
+            return; 
         }
-          return; // Stop here so it doesn't try to print the call as a text message
-      }
 
         if (data.type === 'incoming_video_call') {
             if (String(data.caller_id) !== String(myId)) { 
@@ -374,19 +343,19 @@ window.startChat = function(userId, username) {
             return; 
         }
 
-        // --- 5. NORMAL MESSAGE ---
-        const type = (data.sender_id == myId) ? 'sent' : 'received';
-        const today = new Date().toISOString().split('T')[0];
-        
-        // 👉 UPDATED: Now passing data.video_url to appendMessage!
-        appendMessage(data.message, type, null, today, false, data.message_id, data.video_url);
+        if (data.type === 'chat_message') {
+            const type = (data.sender_id == myId) ? 'sent' : 'received';
+            const today = new Date().toISOString().split('T')[0];
+            
+            appendMessage(data.message, type, null, today, false, data.message_id, data.video_url);
 
-        if (type === 'received') {
-            chatSocket.send(JSON.stringify({ 'mark_read': true }));
-            const senderName = data.sender_name || localStorage.getItem('activeChatName'); 
-            window.showBrowserNotification(senderName, data.message || "Video sent", activeUserId);
+            if (type === 'received') {
+                chatSocket.send(JSON.stringify({ 'mark_read': true }));
+                const senderName = data.sender_name || localStorage.getItem('activeChatName'); 
+                window.showBrowserNotification(senderName, data.message || "Video sent", activeUserId);
+            }
         }
-    };
+    });
 
     fetch(`/api/messages/${userId}/`)
     .then(res => res.json())
@@ -394,7 +363,6 @@ window.startChat = function(userId, username) {
         const myId = document.getElementById('current-user-id').value;
         data.forEach(msg => {
             const type = (msg.sender_id == myId) ? 'sent' : 'received';
-            // 👉 UPDATED: History now loads videos properly!
             appendMessage(msg.content, type, msg.timestamp, msg.date, msg.is_read, msg.id, msg.video_url);
         });
     });
@@ -442,8 +410,6 @@ window.deleteMessage = function(msgId) {
     }
 };
 
-// 👉 UPDATED: Added videoUrl parameter
-// 👉 CRITICAL FIX: Added videoUrl parameter and fixed deletion logic order
 function appendMessage(text, type, time = null, date = null, isRead = false, msgId = null, videoUrl = null) {
     const chatBody = document.querySelector('.conversation-area');
     
@@ -462,11 +428,9 @@ function appendMessage(text, type, time = null, date = null, isRead = false, msg
 
     let contentHtml = '';
     
-    // 1. FIRST check: Is the message deleted?
     if (text === "This message was deleted") {
         contentHtml = `<i class="fa-solid fa-ban" style="color:#888; margin-right:5px;"></i> <i style="color:#888;">This message was deleted</i>`;
     } 
-    // 2. SECOND check: If not deleted, does it have a video?
     else if (videoUrl) {
         contentHtml = `
             <video width="100%" style="max-width: 250px; border-radius: 8px; margin-bottom: 5px;" controls>
@@ -476,11 +440,9 @@ function appendMessage(text, type, time = null, date = null, isRead = false, msg
             ${text ? `<div style="margin-top: 5px;">${text}</div>` : ''}
         `;
     } 
-    
     else if (text && (text.startsWith('/media/') || text.startsWith('http') || text.match(/\.(jpeg|jpg|gif|png)$/) != null)) {
         contentHtml = `<img src="${text}" style="max-width: 100%; height: auto; display: block; border-radius: 8px; cursor: pointer; margin-bottom: 5px;" onclick="window.open(this.src)">`;
     } 
-   
     else {
         contentHtml = text || ''; 
     }
@@ -518,7 +480,6 @@ function appendMessage(text, type, time = null, date = null, isRead = false, msg
     chatBody.scrollTop = chatBody.scrollHeight;
 }
 
-
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -534,23 +495,19 @@ function getCookie(name) {
     return cookieValue;
 }
 
-// 👉 UPDATED: Global Video Uploader Logic fixed to display video immediately
 window.uploadVideoMessage = async function(file) {
     const formData = new FormData();
     formData.append('video', file);
     
-    // Check if we are in a group or private chat so backend knows where to send it
     const activeType = localStorage.getItem('activeChatType');
     const activeId = localStorage.getItem('activeChatId');
     formData.append('room_id', activeId); 
     formData.append('chat_type', activeType); 
-    
     formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
 
     const chatLog = document.querySelector('.conversation-area');
     const tempId = 'temp-' + Date.now();
     
-    // Show temporary uploading message
     chatLog.innerHTML += `<div id="${tempId}" class="message sent"><div class="msg-content"><i><i class="fa-solid fa-spinner fa-spin"></i> Uploading video...</i></div></div>`;
     chatLog.scrollTop = chatLog.scrollHeight;
 
@@ -564,17 +521,14 @@ window.uploadVideoMessage = async function(file) {
         });
         const data = await response.json();
         
-        // Remove temporary message
         const tempMsg = document.getElementById(tempId);
         if (tempMsg) tempMsg.remove();
         
         if (data.status === 'success') {
-            // 1. Draw the video on your screen immediately!
             const today = new Date().toISOString().split('T')[0];
             const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             appendMessage(data.message_content || '', 'sent', timeString, today, false, data.message_id || null, data.video_url);
 
-            // 2. Tell the WebSocket to show it to your friend!
             if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
                 chatSocket.send(JSON.stringify({ 
                     'message': data.message_content || '',
@@ -621,19 +575,17 @@ document.addEventListener('DOMContentLoaded', () => {
         msgInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') sendMessage(); });
     }
 
-    // 👉 Global event listener for the video input button
     const videoInput = document.getElementById('video-input');
     if (videoInput) {
         videoInput.addEventListener('change', function() {
             if (this.files.length > 0) {
-                // Ensure size is under 20MB
                 if (this.files[0].size > 20 * 1024 * 1024) {
                     alert("Please select a video under 20MB.");
                 } else {
                     uploadVideoMessage(this.files[0]);
                 }
             }
-            this.value = ''; // Reset input so you can upload the same file twice if needed
+            this.value = ''; 
         });
     }
 
@@ -658,7 +610,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     document.addEventListener('click', () => { if (mainMenu) mainMenu.style.display = 'none'; });
     
-    // BELL ICON - Enable Push Notifications
     const bellIcon = document.getElementById('enable-notif-btn');
     if (bellIcon) {
         bellIcon.style.cursor = 'pointer';
@@ -935,7 +886,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// This is a math utility browsers require to read your VAPID key safely
 function urlBase64ToUint8Array(base64String) {
     const padding = '='.repeat((4 - base64String.length % 4) % 4);
     const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
@@ -947,7 +897,6 @@ function urlBase64ToUint8Array(base64String) {
     return outputArray;
 }
 
-// Check if user is already subscribed to push notifications
 function checkPushSubscription() {
     const bellIcon = document.getElementById('enable-notif-btn');
     const floatingBtn = document.getElementById('floating-notif-btn');
@@ -956,7 +905,6 @@ function checkPushSubscription() {
         navigator.serviceWorker.ready.then(function(registration) {
             registration.pushManager.getSubscription().then(function(subscription) {
                 if (subscription) {
-                    // User is already subscribed - hide button and update icon
                     if (floatingBtn) {
                         floatingBtn.style.display = 'none';
                     }
@@ -972,15 +920,12 @@ function checkPushSubscription() {
     }
 }
 
-// Run check on page load
 document.addEventListener('DOMContentLoaded', checkPushSubscription);
 
-// Test Push Notification function
 window.testPushNotification = function() {
     alert("This button is for testing only. Use the green bell button to enable notifications.");
 };
 
-// The function that asks the phone for a Push Token
 window.subscribeToPush = function() {
     const bellIcon = document.getElementById('enable-notif-btn');
     const floatingBtn = document.getElementById('floating-notif-btn');
@@ -990,7 +935,6 @@ window.subscribeToPush = function() {
         return;
     }
     
-    // Request notification permission first
     Notification.requestPermission().then(permission => {
         if (permission !== 'granted') {
             alert('Please allow notification permission to receive messages when app is closed.');
@@ -998,8 +942,6 @@ window.subscribeToPush = function() {
         }
         
         navigator.serviceWorker.ready.then(function(registration) {
-            
-            // VAPID Public Key for Push Notifications
             const vapidPublicKey = 'BNzKqc3nOoaTFYmrghrO0rfMV2xnWSFJmtCbwfVYJWRN_EyB5ZgAeecCEyMzy1KPs2NVTw-tzEtgFULQ0MO9giE'; 
             const convertedVapidKey = urlBase64ToUint8Array(vapidPublicKey);
 
@@ -1019,19 +961,16 @@ window.subscribeToPush = function() {
                 .then(res => res.json())
                 .then(data => {
                     if (data.status === 'success') {
-                        // Hide floating button
                         if (floatingBtn) {
                             floatingBtn.style.display = 'none';
                         }
                         
-                        // Update bell icon
                         if (bellIcon) {
                             bellIcon.classList.remove('fa-bell');
                             bellIcon.classList.add('fa-bell-slash');
                             bellIcon.style.color = "#25D366";
                         }
                         
-                        // Show success notification
                         window.showPersistentNotification("Notifications Enabled", "You'll receive messages even when app is closed!");
                     } else {
                         alert('Error enabling notifications. Please try again.');
@@ -1053,11 +992,9 @@ window.subscribeToPush = function() {
     });
 };
 
-
 // ==========================================
-// VOICE CALL LOGIC (WebRTC Phase 1)
+// VOICE CALL LOGIC (WebRTC Phase 1 & 2)
 // ==========================================
-
 let localStream;
 let peerConnection;
 
@@ -1066,8 +1003,6 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (callBtn) {
         callBtn.addEventListener('click', async () => {
-            
-            // Make sure we are actually in a chat with someone
             const activeId = localStorage.getItem('activeChatId');
             if (!activeId) {
                 alert("Please select a user to call first!");
@@ -1075,30 +1010,24 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             try {
-                // 1. Ask for the microphone
                 localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
                 console.log("Microphone connected successfully!");
                 
-                // 👉 THIS IS THE FIX: We define rtcConfig right here!
                 const rtcConfig = {
                     'iceServers': [
                         { 'urls': 'stun:stun.l.google.com:19302' }
                     ]
                 };
                 
-                // 2. Create the WebRTC connection
                 peerConnection = new RTCPeerConnection(rtcConfig);
                 
-                // 3. Put your microphone audio inside the connection
                 localStream.getTracks().forEach(track => {
                     peerConnection.addTrack(track, localStream);
                 });
 
-                // 4. Create the "Offer" (The phone ring invitation)
                 const offer = await peerConnection.createOffer();
                 await peerConnection.setLocalDescription(offer);
 
-                // 5. Send the offer through your existing WebSocket!
                 chatSocket.send(JSON.stringify({
                     'type': 'webrtc_offer',
                     'offer': offer,
