@@ -343,18 +343,24 @@ window.startChat = function(userId, username) {
             return; 
         }
 
-        if (data.type === 'chat_message') {
-            const type = (data.sender_id == myId) ? 'sent' : 'received';
+       // 👉 THE FIX: Catch the message even if Django forgot the 'type' label!
+        if (data.type === 'chat_message' || data.type === 'message' || (data.message && !data.type)) {
+            
+            // Make absolutely sure we know if you sent it, or if they sent it
+            const type = (String(data.sender_id) === String(myId)) ? 'sent' : 'received';
             const today = new Date().toISOString().split('T')[0];
             
-            appendMessage(data.message, type, null, today, false, data.message_id, data.video_url);
+            // Draw the bubble!
+            appendMessage(data.message, type, data.timestamp || null, today, false, data.message_id || null, data.video_url || null);
 
+            // Trigger read receipts and notifications if it's from the other person
             if (type === 'received') {
                 chatSocket.send(JSON.stringify({ 'mark_read': true }));
                 const senderName = data.sender_name || localStorage.getItem('activeChatName'); 
                 window.showBrowserNotification(senderName, data.message || "Video sent", activeUserId);
             }
         }
+    
     });
 
     fetch(`/api/messages/${userId}/`)
