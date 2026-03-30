@@ -184,6 +184,36 @@ window.startGroupChat = function(groupId, groupName) {
             return; 
         }
 
+        if (data.type === 'chat_message') {
+            // 1. Find the chat container (make sure this ID matches your HTML!)
+            const chatBox = document.getElementById('chat-messages'); // Sometimes people name it 'chat-box' or 'chat-container'
+            
+            // 2. Check if the message is from YOU or the OTHER person
+            // (You will need to make sure you have a variable holding your own user ID)
+            const isMe = data.sender_id === parseInt(currentUserId); 
+            
+            // 3. Create the new chat bubble HTML
+            const messageDiv = document.createElement('div');
+            
+            // 👉 IMPORTANT: Change these class names to match whatever CSS you use for your chat bubbles!
+            messageDiv.className = isMe ? 'message my-message' : 'message their-message'; 
+            messageDiv.id = `msg-${data.message_id}`;
+            
+            messageDiv.innerHTML = `
+                <div class="msg-content">${data.message}</div>
+                <span class="msg-meta" style="float: right; margin-left: 10px; font-size: 11px; color: #999; margin-top: 5px;">
+                    ${data.timestamp}
+                </span>
+            `;
+            
+            // 4. Slap the new bubble onto the screen
+            if (chatBox) {
+                chatBox.appendChild(messageDiv);
+                // 5. Auto-scroll to the bottom so the user sees the new message
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+        }
+
         const currentUserId = document.getElementById('current-user-id').value;
         const isMe = String(data.sender_id) === String(currentUserId);
         
