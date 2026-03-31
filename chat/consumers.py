@@ -127,6 +127,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         'call_type': call_type 
                     }
                 )
+                await self.channel_layer.group_send(
+                    f"user_{self.other_user_id}",
+                    {
+                        'type': 'incoming_call_notification', # Triggers the new consumer
+                        'caller_id': self.my_id,
+                        'caller_name': caller_name,
+                        'room_id': text_data_json['room_id'],
+                        'call_type': call_type 
+                    }
+                )
                 return
 
             # --- Video Bypass Logic for Private Chats ---
@@ -481,3 +491,28 @@ class VideoCallConsumer(AsyncWebsocketConsumer):
     async def forward_message(self, event):
         if self.channel_name != event['sender_channel_name']:
             await self.send(text_data=event['message'])
+
+
+class NotificationConsumer(AsyncWebsocketConsumer):
+    async def connect(self):
+        if self.scope['user'].is_authenticated:
+            # Create a personal global channel just for this user
+            self.user_group_name = f"user_{self.scope['user'].id}"
+            await self.channel_layer.group_add(self.user_group_name, self.channel_name)
+            await self.accept()
+        else:
+            await self.close()
+
+    async def disconnect(self, close_code):
+        if hasattr(self, 'user_group_name'):
+            await self.channel_layer.group_discard(self.user_group_name, self.channel_name)
+
+    async def incoming_call_notification(self, event):
+        # Forward the call to the global frontend
+        await self.send(text_data=json.dumps({
+            'type': 'incoming_video_call',
+            'caller_id': event['caller_id'],
+            'caller_name': event['caller_name'],
+            'room_id': event['room_id'],
+            'call_type': event.get('call_type', 'video')
+        }))          
