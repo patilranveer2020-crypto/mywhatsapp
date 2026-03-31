@@ -131,27 +131,26 @@
             if (event.candidate) {
                 socket.send(JSON.stringify({ 'type': 'webrtc_ice_candidate', 'candidate': event.candidate }));
             }
-        };
+        }; // Notice I removed the extra closing bracket here!
 
-        // 👉 THE FIX: Force the browser to play the audio out loud!
+        // 👉 Now this is safely INSIDE the function!
         peerConnection.ontrack = event => {
             console.log('✅ Video stream received from friend!', event.streams[0]);
             
             const remoteVideo = document.getElementById('remote-video'); 
             remoteVideo.srcObject = event.streams[0];
             
-            // Tell the browser "PLAY THIS NOW!"
             remoteVideo.play().then(() => {
                 console.log("🔊 Audio is officially playing out loud!");
             }).catch(error => {
                 console.error("❌ BROWSER BLOCKED THE AUDIO:", error);
                 alert("Browser blocked the audio! Click anywhere on the screen to hear your friend.");
-                // If the browser blocks it, wait for the user to click the screen to unlock it
                 document.body.addEventListener('click', () => {
                     remoteVideo.play();
                 }, { once: true });
             });
         };
+    }; // <--- The function officially closes here!
 
     const processIceQueue = async () => {
         while (iceCandidateQueue.length > 0) {
