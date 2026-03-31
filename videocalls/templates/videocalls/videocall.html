@@ -73,19 +73,29 @@
 
     socket.onopen = async () => {
         try {
-            localStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            // 👉 1. Check the URL to see if this is a voice-only call
+            const urlParams = new URLSearchParams(window.location.search);
+            const isVoiceOnly = urlParams.get('type') === 'voice';
+
+            // 👉 2. Turn off the video if it is!
+            localStream = await navigator.mediaDevices.getUserMedia({ 
+                video: isVoiceOnly ? false : true,  
+                audio: true 
+            });
+            
             localVideo.srcObject = localStream;
-            console.log("Camera loaded. Am I caller?", is_caller);
+            console.log("Media loaded. Voice only?", isVoiceOnly, "Am I caller?", is_caller);
             
             if (!is_caller) {
                 console.log("I am answering. Telling caller I am ready...");
                 socket.send(JSON.stringify({ 'type': 'peer_ready' }));
             }
         } catch (error) {
-            console.error("Camera access denied: ", error);
+            console.error("Camera/Microphone access denied: ", error);
         }
     };
 
+    
     socket.onmessage = async (event) => {
         const data = JSON.parse(event.data);
         console.log("Websocket received:", data.type);

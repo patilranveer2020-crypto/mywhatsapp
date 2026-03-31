@@ -310,8 +310,10 @@ window.startChat = function(userId, username) {
                 callerNameText.innerText = data.caller_name || "Unknown Caller";
                 callerAvatar.src = `https://ui-avatars.com/api/?name=${data.caller_name || 'User'}&background=random`;
                 
-                // 3. Secretly attach the Room ID to the Accept button so it knows where to go!
-                document.getElementById('accept-call-btn').setAttribute('data-room', data.room_id);
+                // 3. Secretly attach the Room ID AND Call Type to the Accept button!
+                const acceptBtn = document.getElementById('accept-call-btn');
+                acceptBtn.setAttribute('data-room', data.room_id);
+                acceptBtn.setAttribute('data-type', data.call_type || 'video'); // 👉 THIS IS THE NEW LINE!
                 
                 // 4. Show the screen and play the ringtone!
                 callModal.style.display = 'flex';
@@ -1068,10 +1070,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
                 chatSocket.send(JSON.stringify({
                     'type': 'video_call_init',
-                    'room_id': callRoomId
+                    'room_id': callRoomId,
+                    'call_type': 'voice'
                 }));
                 // Send the caller to the room to wait
-                window.location.href = `/videocalls/${callRoomId}/?caller=1`; 
+                window.location.href = `/videocalls/${callRoomId}/?caller=1&type=voice`; 
             } else {
                 alert("Chat connection is offline. Cannot start call.");
             }
@@ -1089,14 +1092,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (acceptBtn) {
         acceptBtn.addEventListener('click', function() {
-            // Stop the ringing
             ringtone.pause();
             ringtone.currentTime = 0;
             callModal.style.display = 'none';
             
-            // Go to the actual call room!
             const roomId = this.getAttribute('data-room');
-            window.location.href = `/videocalls/${roomId}/?caller=0`;
+            const callType = this.getAttribute('data-type') || 'video';
+            
+            // 👉 Pass the type to the URL when answering!
+            window.location.href = `/videocalls/${roomId}/?caller=0&type=${callType}`;
         });
     }
 

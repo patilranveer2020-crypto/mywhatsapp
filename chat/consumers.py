@@ -100,6 +100,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 )
                 return 
             
+            # 👉 THE FIX: Tell the group if it's a Voice or Video call!
             if text_data_json.get('type') == 'video_call_init':
                 await self.channel_layer.group_send(
                     self.room_group_name,
@@ -107,12 +108,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         'type': 'incoming_video_call',
                         'caller_id': self.my_id,
                         'caller_name': self.scope['user'].username,
-                        'room_id': text_data_json['room_id']
+                        'room_id': text_data_json['room_id'],
+                        'call_type': text_data_json.get('call_type', 'video') # Pass the call type to the group!
                     }
                 )
                 return
 
-            # 👉 NEW: Video Bypass Logic for Private Chats
+            # --- Video Bypass Logic for Private Chats ---
             video_url = text_data_json.get('video_url')
             message_content = text_data_json.get('message', '')
 
@@ -132,7 +134,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         'type': 'chat_message',
                         'message_id': text_data_json.get('message_id', 0), 
                         'message': message_content,
-                        'video_url': video_url, # Pass the URL to the group!
+                        'video_url': video_url,
                         'sender_id': self.my_id,
                         'sender_name': sender_name,
                         'timestamp': local_time.strftime("%I:%M %p"),
@@ -144,10 +146,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
             # --- NORMAL TEXT MESSAGE LOGIC ---
             try:
-                # 1. Save the message to the database
                 new_msg = await self.save_message(message_content, self.my_id, self.other_user_id)
-                
-                # 2. TRIGGER THE PUSH NOTIFICATION!
                 sender_name = self.scope['user'].username
                 await self.trigger_private_push(self.other_user_id, f"New message from {sender_name}", message_content)
                 
@@ -180,21 +179,22 @@ class ChatConsumer(AsyncWebsocketConsumer):
         except Exception as e:
             print(f"--- CRITICAL WEBSOCKET ERROR: {e} ---")
     
+    # 👉 THE FIX: Deliver the call type down to the browser!
     async def incoming_video_call(self, event):
         await self.send(text_data=json.dumps({
             'type': 'incoming_video_call',
-            'caller_id': event['caller_id'],
-            'caller_name': event['caller_name'],
-            'room_id': event['room_id']
+            'room_id': event.get('room_id'),
+            'caller_id': event.get('caller_id'),
+            'caller_name': event.get('caller_name'),
+            'call_type': event.get('call_type', 'video') # 👉 Send it to JS
         }))
 
     async def chat_message(self, event):
-        # Send the message down to the browser
         await self.send(text_data=json.dumps({
             'type': 'chat_message',
             'message_id': event.get('message_id'),
             'message': event.get('message'),
-            'video_url': event.get('video_url'), # 👉 NEW: Pass it to frontend
+            'video_url': event.get('video_url'), 
             'sender_id': event.get('sender_id'),
             'sender_name': event.get('sender_name'),
             'timestamp': event.get('timestamp'),
@@ -319,7 +319,6 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
         user_id = self.scope['user'].id
         sender_name = self.scope['user'].username
 
-        # 1. Voice Call Offer Logic
         if text_data_json.get('type') == 'webrtc_offer':
             await self.channel_layer.group_send(
                 self.room_group_name,
@@ -331,7 +330,6 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
             )
             return
 
-        # 2. Delete Message Logic
         if text_data_json.get('action') == 'delete_message':
             msg_id = text_data_json.get('message_id')
             await self.mark_group_message_deleted_in_db(msg_id, user_id)
@@ -345,14 +343,12 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
             )
             return
             
-        # 3. Video Bypass & Normal Text Logic (This is safely back in receive!)
         video_url = text_data_json.get('video_url')
         message = text_data_json.get('message', '')
 
         if video_url or message:
             
             if video_url:
-                # Video Bypass! Skip database saving
                 await self.trigger_group_push(self.group_id, user_id, sender_name, "🎥 Video message")
                 await self.channel_layer.group_send(
                     self.room_group_name,
@@ -360,7 +356,7 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
                         'type': 'chat_message',
                         'message_id': text_data_json.get('message_id', 0),
                         'message': message,
-                        'video_url': video_url, # Pass URL to group
+                        'video_url': video_url, 
                         'sender_id': user_id,
                         'sender_name': sender_name,
                         'timestamp': timezone.localtime().strftime('%H:%M')
@@ -368,7 +364,6 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
                 )
                 return
 
-            # Normal Text Message Logic
             saved_msg = await self.save_group_message(user_id, self.group_id, message)
             await self.trigger_group_push(self.group_id, user_id, sender_name, message)
 
@@ -391,26 +386,19 @@ class GroupChatConsumer(AsyncWebsocketConsumer):
         elif text_data_json.get('mark_read'):
             pass 
 
-
-    # ==========================================
-    # 4. WEBRTC HELPER FUNCTION (Outside of receive!)
-    # ==========================================
     async def forward_webrtc_offer(self, event):
-        # Only send the phone ring to the OTHER person, not back to the caller
          if self.channel_name != event['sender_channel_name']:
             await self.send(text_data=json.dumps({
                 'type': 'webrtc_offer',
                 'offer': event['offer']
             }))
-
-
             
     async def chat_message(self, event):
         await self.send(text_data=json.dumps({
             'type': 'chat_message',
             'message_id': event.get('message_id'), 
             'message': event.get('message'),
-            'video_url': event.get('video_url'), # 👉 NEW: Pass it to frontend
+            'video_url': event.get('video_url'), 
             'sender_id': event.get('sender_id'),
             'sender_name': event.get('sender_name'),
             'timestamp': event.get('timestamp')
@@ -478,20 +466,3 @@ class VideoCallConsumer(AsyncWebsocketConsumer):
     async def forward_message(self, event):
         if self.channel_name != event['sender_channel_name']:
             await self.send(text_data=event['message'])
-
-
-
-            # ==========================================
-    # THE MAILMAN: Delivers real-time text messages
-    # ==========================================
-    async def chat_message(self, event):
-        # This takes the message from the group and sends it down the WebSocket to the browser
-        await self.send(text_data=json.dumps({
-            'type': 'chat_message',
-            'message_id': event.get('message_id'),
-            'message': event.get('message'),
-            'video_url': event.get('video_url'),
-            'sender_id': event.get('sender_id'),
-            'sender_name': event.get('sender_name'),
-            'timestamp': event.get('timestamp')
-        }))
