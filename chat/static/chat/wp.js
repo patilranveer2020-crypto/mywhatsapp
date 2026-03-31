@@ -297,13 +297,25 @@ window.startChat = function(userId, username) {
             return; 
         }
 
+        // 👉 THE FIX: Hijack the working video call signal to trigger the Ringtone UI!
         if (data.type === 'incoming_video_call') {
             if (String(data.caller_id) !== String(myId)) { 
-                window.playNotificationSound();
-                let acceptCall = confirm(`🎥 Incoming Video Call from ${data.caller_name}! Do you want to answer?`);
-                if (acceptCall) {
-                   window.location.href = `/videocalls/${data.room_id}/?caller=0`;
-                }
+                // 1. Get the UI elements
+                const callModal = document.getElementById('incoming-call-modal');
+                const callerNameText = document.getElementById('caller-name-display');
+                const callerAvatar = document.getElementById('caller-avatar');
+                const ringtone = document.getElementById('ringtone-audio');
+                
+                // 2. Set the caller's info
+                callerNameText.innerText = data.caller_name || "Unknown Caller";
+                callerAvatar.src = `https://ui-avatars.com/api/?name=${data.caller_name || 'User'}&background=random`;
+                
+                // 3. Secretly attach the Room ID to the Accept button so it knows where to go!
+                document.getElementById('accept-call-btn').setAttribute('data-room', data.room_id);
+                
+                // 4. Show the screen and play the ringtone!
+                callModal.style.display = 'flex';
+                ringtone.play().catch(e => console.log("Browser blocked autoplay.", e));
             }
             return; 
         }
@@ -1037,52 +1049,35 @@ window.subscribeToPush = function() {
 // ==========================================
 // VOICE CALL LOGIC (WebRTC Phase 1 & 2)
 // ==========================================
-let localStream;
-let peerConnection;
-
+// ==========================================
+// START VOICE CALL BUTTON
+// ==========================================
 document.addEventListener('DOMContentLoaded', () => {
     const callBtn = document.getElementById('start-voice-call');
     
     if (callBtn) {
-        callBtn.addEventListener('click', async () => {
+        callBtn.addEventListener('click', () => {
             const activeId = localStorage.getItem('activeChatId');
             if (!activeId) {
                 alert("Please select a user to call first!");
                 return;
             }
 
-            try {
-                localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                console.log("Microphone connected successfully!");
-                
-                const rtcConfig = {
-                    'iceServers': [
-                        { 'urls': 'stun:stun.l.google.com:19302' }
-                    ]
-                };
-                
-                peerConnection = new RTCPeerConnection(rtcConfig);
-                
-                localStream.getTracks().forEach(track => {
-                    peerConnection.addTrack(track, localStream);
-                });
-
-                const offer = await peerConnection.createOffer();
-                await peerConnection.setLocalDescription(offer);
-
+            // Create a secure room and use the signal Django already understands!
+            const callRoomId = crypto.randomUUID(); 
+            if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
                 chatSocket.send(JSON.stringify({
-                    'type': 'webrtc_offer',
-                    'offer': offer,
-                    'receiver_id': activeId
+                    'type': 'video_call_init',
+                    'room_id': callRoomId
                 }));
-                
-                console.log("Voice call offer sent through WebSocket!");
-                
-            } catch (error) {
-                console.error("Microphone error:", error);
+                // Send the caller to the room to wait
+                window.location.href = `/videocalls/${callRoomId}/?caller=1`; 
+            } else {
+                alert("Chat connection is offline. Cannot start call.");
             }
         });
     }
+
 
     // ==========================================
     // CALL BUTTON LOGIC (Accept / Decline)
@@ -1093,26 +1088,24 @@ document.addEventListener('DOMContentLoaded', () => {
     const ringtone = document.getElementById('ringtone-audio');
 
     if (acceptBtn) {
-        acceptBtn.addEventListener('click', () => {
+        acceptBtn.addEventListener('click', function() {
             // Stop the ringing
             ringtone.pause();
             ringtone.currentTime = 0;
             callModal.style.display = 'none';
             
-            console.log("📞 Call Accepted!");
-            alert("Call Accepted! We will connect the audio WebRTC tracks next!");
+            // Go to the actual call room!
+            const roomId = this.getAttribute('data-room');
+            window.location.href = `/videocalls/${roomId}/?caller=0`;
         });
     }
 
     if (declineBtn) {
         declineBtn.addEventListener('click', () => {
-            // Stop the ringing
+            // Stop the ringing and hide screen
             ringtone.pause();
             ringtone.currentTime = 0;
             callModal.style.display = 'none';
-            
-            console.log("❌ Call Declined.");
-            // We will add the code to tell the caller we hung up later!
         });
     }
 });
