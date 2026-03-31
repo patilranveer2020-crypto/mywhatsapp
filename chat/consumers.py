@@ -101,15 +101,30 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 return 
             
             # 👉 THE FIX: Tell the group if it's a Voice or Video call!
+            
             if text_data_json.get('type') == 'video_call_init':
+                call_type = text_data_json.get('call_type', 'video')
+                caller_name = self.scope['user'].username
+
+                # 1. 🚨 NEW: Send a Push Notification to wake up their phone!
+                try:
+                    await self.trigger_private_push(
+                        self.other_user_id, 
+                        f"📲 Incoming {call_type.title()} Call", 
+                        f"{caller_name} is calling you! Tap to open."
+                    )
+                except Exception as e:
+                    print(f"Push error on call: {e}")
+
+                # 2. Send the signal to the chat room (if they are in it)
                 await self.channel_layer.group_send(
                     self.room_group_name,
                     {
                         'type': 'incoming_video_call',
                         'caller_id': self.my_id,
-                        'caller_name': self.scope['user'].username,
+                        'caller_name': caller_name,
                         'room_id': text_data_json['room_id'],
-                        'call_type': text_data_json.get('call_type', 'video') # Pass the call type to the group!
+                        'call_type': call_type 
                     }
                 )
                 return
