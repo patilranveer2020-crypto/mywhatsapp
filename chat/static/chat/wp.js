@@ -275,13 +275,25 @@ window.startChat = function(userId, username) {
 
         console.log("🚨 TRACKER (Private): Message received from Django!", data);
 
+        // 👉 THE FIX: Trigger the Full-Screen Ringtone UI!
         if (data.type === 'webrtc_offer') {
             console.log("📲 INCOMING CALL SIGNAL RECEIVED:", data.offer);
-            if (confirm("Incoming Voice Call! Do you want to answer?")) {
-                console.log("User accepted the call. Ready for Phase 3!");
-            } else {
-                console.log("User rejected the call.");
-            }
+            
+            // 1. Get the UI elements
+            const callModal = document.getElementById('incoming-call-modal');
+            const callerNameText = document.getElementById('caller-name-display');
+            const callerAvatar = document.getElementById('caller-avatar');
+            const ringtone = document.getElementById('ringtone-audio');
+            
+            // 2. Set the caller's name and picture
+            const callerName = data.sender_name || "Unknown Caller";
+            callerNameText.innerText = callerName;
+            callerAvatar.src = `https://ui-avatars.com/api/?name=${callerName}&background=random`;
+            
+            // 3. Show the screen and play the ringtone!
+            callModal.style.display = 'flex';
+            ringtone.play().catch(e => console.log("Browser blocked autoplay. User must interact first.", e));
+            
             return; 
         }
 
@@ -1069,6 +1081,38 @@ document.addEventListener('DOMContentLoaded', () => {
             } catch (error) {
                 console.error("Microphone error:", error);
             }
+        });
+    }
+
+    // ==========================================
+    // CALL BUTTON LOGIC (Accept / Decline)
+    // ==========================================
+    const acceptBtn = document.getElementById('accept-call-btn');
+    const declineBtn = document.getElementById('decline-call-btn');
+    const callModal = document.getElementById('incoming-call-modal');
+    const ringtone = document.getElementById('ringtone-audio');
+
+    if (acceptBtn) {
+        acceptBtn.addEventListener('click', () => {
+            // Stop the ringing
+            ringtone.pause();
+            ringtone.currentTime = 0;
+            callModal.style.display = 'none';
+            
+            console.log("📞 Call Accepted!");
+            alert("Call Accepted! We will connect the audio WebRTC tracks next!");
+        });
+    }
+
+    if (declineBtn) {
+        declineBtn.addEventListener('click', () => {
+            // Stop the ringing
+            ringtone.pause();
+            ringtone.currentTime = 0;
+            callModal.style.display = 'none';
+            
+            console.log("❌ Call Declined.");
+            // We will add the code to tell the caller we hung up later!
         });
     }
 });

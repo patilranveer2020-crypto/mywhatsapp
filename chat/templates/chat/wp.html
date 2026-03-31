@@ -307,9 +307,37 @@
             
         </div>
     </div>
+    <div id="incoming-call-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(17,17,17,0.95); z-index: 9999999; flex-direction: column; justify-content: center; align-items: center; color: white; backdrop-filter: blur(5px);">
+        
+        <img id="caller-avatar" src="" style="width: 130px; height: 130px; border-radius: 50%; margin-bottom: 20px; border: 4px solid #00bfa5; box-shadow: 0 0 20px rgba(0, 191, 165, 0.4);">
+        <h2 id="caller-name-display" style="margin-bottom: 5px; font-size: 28px; font-weight: 500;">Caller Name</h2>
+        <p style="color: #00bfa5; margin-bottom: 50px; font-size: 16px; letter-spacing: 1px;">Incoming Voice Call...</p>
+        
+        <div style="display: flex; gap: 50px;">
+            <button id="decline-call-btn" style="width: 75px; height: 75px; border-radius: 50%; background: #ff4444; border: none; color: white; font-size: 32px; cursor: pointer; box-shadow: 0 4px 15px rgba(255,68,68,0.4); transition: transform 0.2s;">
+                <i class="fa-solid fa-phone-slash"></i>
+            </button>
+            
+            <button id="accept-call-btn" style="width: 75px; height: 75px; border-radius: 50%; background: #25D366; border: none; color: white; font-size: 32px; cursor: pointer; box-shadow: 0 4px 15px rgba(37,211,102,0.4); transition: transform 0.2s; animation: pulse-green 1.5s infinite;">
+                <i class="fa-solid fa-phone"></i>
+            </button>
+        </div>
+        
+        <audio id="ringtone-audio" loop preload="auto">
+            <source src="https://assets.mixkit.co/active_storage/sfx/1359/1359-preview.mp3" type="audio/mpeg">
+        </audio>
+
+        <style>
+            @keyframes pulse-green {
+                0% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7); }
+                70% { box-shadow: 0 0 0 20px rgba(37, 211, 102, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0); }
+            }
+        </style>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@joeattardi/emoji-button@3.1.1/dist/index.min.js"></script>
-    <script src="{% static 'chat/wp.js' %}?v=24"></script>
+    <script src="{% static 'chat/wp.js' %}?v=25"></script>
     <script src="{% static 'chat/videocall.js' %}?v=1"></script>
     <audio id="remote-audio" autoplay></audio>
 </body>
