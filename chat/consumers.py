@@ -255,9 +255,17 @@ class ChatConsumer(AsyncWebsocketConsumer):
         return msg 
 
     @database_sync_to_async
-    def trigger_private_push(self, target_user_id, title, message):
+    def trigger_private_push(self, target_user_id, title, message, extra_data=None):
         try:
             target_user = User.objects.get(id=target_user_id)
+            
+            # Pack the hidden data into a JSON string along with the message
+            import json
+            if extra_data:
+                # We hide the URL data directly inside the message string so it doesn't break your existing push setup!
+                secret_payload = {"body": message, "data": extra_data}
+                message = json.dumps(secret_payload)
+
             send_push_notification(target_user, title, message)
         except Exception as e:
             print(f"Push Notification Failed: {e}")

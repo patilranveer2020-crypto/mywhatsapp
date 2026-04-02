@@ -78,20 +78,26 @@ self.addEventListener('notificationclick', function(event) {
 // Listen for the user clicking the notification
 self.addEventListener('notificationclick', function(event) {
     event.notification.close(); // Close the little notification
+    
+    // 👉 1. If they clicked your custom "Decline" button, do nothing!
+    if (event.action === 'decline') {
+        return; 
+    }
 
-    // This URL will open your main app where the Ringing Screen is waiting!
-    const targetUrl = '/'; 
+    // 👉 2. THE FIX: Grab the hidden URL from the push data! 
+    // If it's a normal message, it defaults to '/'. If it's a call, it uses the call link!
+    const targetUrl = event.notification.data ? (event.notification.data.url || '/') : '/';
 
     event.waitUntil(
         clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
-            // If the app is already open in the background, bring it to the front
+            // If the app is already open in the background, bring it to the front and change the page
             for (let i = 0; i < clientList.length; i++) {
                 let client = clientList[i];
-                if (client.url.includes(targetUrl) && 'focus' in client) {
-                    return client.focus();
+                if ('focus' in client) {
+                    return client.focus().then(c => c.navigate(targetUrl));
                 }
             }
-            // If the app was completely closed, open it fresh!
+            // If the app was completely closed, open a brand new window straight to the call!
             if (clients.openWindow) {
                 return clients.openWindow(targetUrl);
             }
