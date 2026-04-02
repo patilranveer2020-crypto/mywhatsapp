@@ -74,3 +74,27 @@ self.addEventListener('notificationclick', function(event) {
         clients.openWindow(event.notification.data.url)
     );
 });
+
+// Listen for the user clicking the notification
+self.addEventListener('notificationclick', function(event) {
+    event.notification.close(); // Close the little notification
+
+    // This URL will open your main app where the Ringing Screen is waiting!
+    const targetUrl = '/'; 
+
+    event.waitUntil(
+        clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+            // If the app is already open in the background, bring it to the front
+            for (let i = 0; i < clientList.length; i++) {
+                let client = clientList[i];
+                if (client.url.includes(targetUrl) && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            // If the app was completely closed, open it fresh!
+            if (clients.openWindow) {
+                return clients.openWindow(targetUrl);
+            }
+        })
+    );
+});
