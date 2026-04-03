@@ -26,6 +26,19 @@ self.addEventListener('fetch', event => {
   );
 });
 
+
+
+self.addEventListener('install', function(event) {
+    self.skipWaiting(); 
+});
+
+// 👉 2. FORCE CONTROL: Take over the phone immediately!
+self.addEventListener('activate', function(event) {
+    event.waitUntil(clients.claim());
+});
+
+
+
 // Listen for Push events (when the app is closed)
 self.addEventListener('push', function(event) {
     let data = {};

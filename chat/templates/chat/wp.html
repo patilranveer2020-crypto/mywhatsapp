@@ -22,7 +22,7 @@
  if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       // 👉 THE FIX: Added ?v=2 to trick the phone into downloading the new code!
-      navigator.serviceWorker.register('/sw.js?v=2')
+      navigator.serviceWorker.register('/sw.js?v=3')
         .then(registration => {
           console.log('Service Worker registered!', registration.scope);
         })
