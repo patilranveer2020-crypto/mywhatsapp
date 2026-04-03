@@ -19,10 +19,10 @@
     <link rel="apple-touch-icon" href="{% static 'icon-192.png' %}">
 
 <script>
-  if ('serviceWorker' in navigator) {
+ if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-      // Register from root URL to get full scope
-      navigator.serviceWorker.register('/sw.js')
+      // 👉 THE FIX: Added ?v=2 to trick the phone into downloading the new code!
+      navigator.serviceWorker.register('/sw.js?v=2')
         .then(registration => {
           console.log('Service Worker registered!', registration.scope);
         })
